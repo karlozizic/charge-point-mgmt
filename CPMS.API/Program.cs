@@ -29,14 +29,14 @@ builder.Services.AddScoped<IChargePointRepository, ChargePointRepository>();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c => {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CPMS API v1");
-        c.RoutePrefix = "swagger";
-    });
-}
+//if (app.Environment.IsDevelopment())
+//{
+app.UseSwagger();
+app.UseSwaggerUI(c => {
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "CPMS API v1");
+    c.RoutePrefix = "swagger";
+});
+//}
 
 app.UseRouting();
 app.UseHttpsRedirection();
