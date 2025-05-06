@@ -1,6 +1,5 @@
 using Newtonsoft.Json;
 using System.Net.WebSockets;
-using CPMS.API.Entities;
 
 namespace CPMS.Proxy.Models;
 
@@ -12,17 +11,13 @@ public class ChargePointStatus
     {
     }
 
-    public ChargePointStatus(ChargePoint chargePoint)
+    public ChargePointStatus(Guid chargePointId)
     {
-        Id = chargePoint.Id.ToString();
-        Name = chargePoint.Name;
+        Id = chargePointId.ToString();
     }
 
     [JsonProperty("id")]
     public string Id { get; set; }
-
-    [JsonProperty("name")]
-    public string Name { get; set; }
 
     [JsonProperty("protocol")]
     public string Protocol { get; set; }

@@ -1,10 +1,7 @@
-﻿
-using CPMS.BuildingBlocks.Infrastructure.Logger;
+﻿using CPMS.BuildingBlocks.Infrastructure.Logger;
 using CPMS.Proxy.Configuration;
 using CPMS.Proxy.Services;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.WebSockets;
-using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -45,6 +42,7 @@ var app = builder.Build();
 app.UseWebSockets();
 
 app.UseCors("AllowAll");
+
 //todo: middleware reference?
 app.UseOCPPMiddleware();
 
