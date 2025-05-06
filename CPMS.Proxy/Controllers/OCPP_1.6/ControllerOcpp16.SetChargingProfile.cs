@@ -1,7 +1,8 @@
+using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
-using CPMS.Proxy.Models.Cpms.Responses;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
+using SetChargingProfileResponse = CPMS.Core.Models.Responses.SetChargingProfileResponse;
 
 namespace CPMS.Proxy.Controllers.OCPP_1._6;
 
@@ -9,15 +10,15 @@ public partial class ControllerOcpp16
 {
     private async Task HandleSetChargingProfile(OCPPMessage msgIn, OCPPMessage msgOut)
     {
-        SetChargingProfileResponse setChargingProfileResponse =
-            JsonConvert.DeserializeObject<SetChargingProfileResponse>(msgIn.JsonPayload) ??
+        Proxy.OCPP_1._6.SetChargingProfileResponse setChargingProfileResponse =
+            JsonConvert.DeserializeObject<Proxy.OCPP_1._6.SetChargingProfileResponse>(msgIn.JsonPayload) ??
             throw new InvalidOperationException();
         
         SetChargingProfileRequest changeConfigurationRequest =
             JsonConvert.DeserializeObject<SetChargingProfileRequest>(msgOut.JsonPayload) 
             ?? throw new InvalidOperationException();
         
-        SetChargingProfileCpmsResponse setChargingProfileResponseProxy = new SetChargingProfileCpmsResponse
+        SetChargingProfileResponse setChargingProfileResponseProxy = new SetChargingProfileResponse
             {
                 ChargerId = new Guid(ChargePointStatus.Id),
                 Status = setChargingProfileResponse.Status.ToString()

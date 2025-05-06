@@ -1,6 +1,6 @@
+using CPMS.Core.Models.Requests;
+using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
-using CPMS.Proxy.Models.Cpms.Requests;
-using CPMS.Proxy.Models.Cpms.Responses;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
 
@@ -22,14 +22,14 @@ public partial class ControllerOcpp16
                 IdTagInfo = new IdTagInfo()
             };
 
-            AuthorizeChargerCpmsRequest authorizeChargerCpmsRequest = new AuthorizeChargerCpmsRequest
+            AuthorizeChargerRequest authorizeChargerRequest = new AuthorizeChargerRequest
             {
                 IdTag = authorizeRequest.IdTag,
                 ChargerId = new Guid(ChargePointStatus.Id),
                 Protocol = ChargePointStatus.Protocol
             };
 
-            AuthorizeChargerResponse authorizationChargerResponse = await _cpmsClient.Authorize(authorizeChargerCpmsRequest);
+            AuthorizeChargerResponse authorizationChargerResponse = await _cpmsClient.Authorize(authorizeChargerRequest);
 
             authorizeResponse.IdTagInfo.Status = authorizationChargerResponse.AuthorizationStatus;
             

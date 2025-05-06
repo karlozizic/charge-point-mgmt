@@ -1,6 +1,6 @@
-namespace CPMS.Proxy.Models.Cpms.Requests;
+namespace CPMS.Core.Models.Requests;
 
-public class BootNotificationCpmsRequest : BaseMessage
+public class BootNotificationRequest : BaseMessage
 {
     [Newtonsoft.Json.JsonProperty("chargePointVendor", Required = Newtonsoft.Json.Required.Always)]
     [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]

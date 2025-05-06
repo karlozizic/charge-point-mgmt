@@ -1,7 +1,8 @@
+using CPMS.Core.Models.Requests;
 using CPMS.Proxy.Models;
-using CPMS.Proxy.Models.Cpms.Requests;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
+using BootNotificationRequest = CPMS.Core.Models.Requests.BootNotificationRequest;
 
 namespace CPMS.Proxy.Controllers.OCPP_1._6;
 
@@ -14,8 +15,8 @@ public partial class ControllerOcpp16
         try
         {
             Logger.Info("Processing boot notification...");
-            BootNotificationRequest bootNotificationRequest = JsonConvert.DeserializeObject<BootNotificationRequest>(msgIn.JsonPayload) 
-                                                              ?? throw new InvalidOperationException();
+            Proxy.OCPP_1._6.BootNotificationRequest bootNotificationRequest = JsonConvert.DeserializeObject<Proxy.OCPP_1._6.BootNotificationRequest>(msgIn.JsonPayload) 
+                                                                              ?? throw new InvalidOperationException();
             Logger.Info($"BootNotification => Message deserialized: {bootNotificationRequest}");
 
             BootNotificationResponse bootNotificationResponse = new BootNotificationResponse
@@ -40,7 +41,7 @@ public partial class ControllerOcpp16
             msgOut.JsonPayload = JsonConvert.SerializeObject(bootNotificationResponse);
             Logger.Info($"BootNotification => Response serialized: {msgOut.JsonPayload}");
 
-            var bootNotificationCpmsRequest = new BootNotificationCpmsRequest
+            var bootNotificationCpmsRequest = new BootNotificationRequest
             {
                 ChargePointVendor = bootNotificationRequest.ChargePointVendor,
                 ChargePointModel = bootNotificationRequest.ChargePointModel,

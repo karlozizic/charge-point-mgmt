@@ -1,3 +1,5 @@
+using CPMS.Core.Models.Responses;
+
 namespace CPMS.Proxy.OCPP_1._6;
 
 public class AuthorizeResponse
@@ -21,7 +23,7 @@ public class IdTagInfo
     [Newtonsoft.Json.JsonProperty("status", Required = Newtonsoft.Json.Required.Always)]
     [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
     [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-    public IdTagInfoStatus Status { get; set; }
+    public IdTagStatus Status { get; set; }
 }
 
 

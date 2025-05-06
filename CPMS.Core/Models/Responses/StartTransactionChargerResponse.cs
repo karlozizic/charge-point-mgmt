@@ -1,4 +1,4 @@
-namespace CPMS.Proxy.Models.Cpms.Responses;
+namespace CPMS.Core.Models.Responses;
 
 public class StartTransactionChargerResponse
 {

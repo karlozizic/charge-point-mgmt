@@ -1,8 +1,9 @@
 using System.Globalization;
+using CPMS.Core.Models.Requests;
 using CPMS.Proxy.Models;
-using CPMS.Proxy.Models.Cpms.Requests;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
+using MeterValuesRequest = CPMS.Core.Models.Requests.MeterValuesRequest;
 
 namespace CPMS.Proxy.Controllers.OCPP_1._6;
 
@@ -14,8 +15,8 @@ public partial class ControllerOcpp16
 
         try
         {
-            MeterValuesRequest meterValueRequest = JsonConvert.DeserializeObject<MeterValuesRequest>(msgIn.JsonPayload) 
-                                                   ?? throw new InvalidOperationException();
+            Proxy.OCPP_1._6.MeterValuesRequest meterValueRequest = JsonConvert.DeserializeObject<Proxy.OCPP_1._6.MeterValuesRequest>(msgIn.JsonPayload) 
+                                                                   ?? throw new InvalidOperationException();
             
             if (ChargePointStatus == null)
             {
@@ -24,7 +25,7 @@ public partial class ControllerOcpp16
                 return errorCode;
             }
                 
-            MeterValuesCpmsRequest meterValues = ProcessMeterValues(meterValueRequest);
+            MeterValuesRequest meterValues = ProcessMeterValues(meterValueRequest);
             meterValues.ChargerId = new Guid(ChargePointStatus.Id);
             meterValues.Protocol = ChargePointStatus.Protocol;
             meterValues.TransactionId = meterValueRequest.TransactionId;
@@ -40,7 +41,7 @@ public partial class ControllerOcpp16
         return errorCode;
     }
 
-    private MeterValuesCpmsRequest ProcessMeterValues(MeterValuesRequest meterValueRequest)
+    private MeterValuesRequest ProcessMeterValues(Proxy.OCPP_1._6.MeterValuesRequest meterValueRequest)
     {
         double totalPowerKW  = 0;
         double totalEnergyKWh  = 0;
@@ -72,7 +73,7 @@ public partial class ControllerOcpp16
             }
         }
 
-        MeterValuesCpmsRequest meterValueProxy = new MeterValuesCpmsRequest
+        MeterValuesRequest meterValueProxy = new MeterValuesRequest
         {
             EnergyConsumed = totalEnergyKWh,
             CurrentPower = totalPowerKW,

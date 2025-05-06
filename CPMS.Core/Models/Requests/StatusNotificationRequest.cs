@@ -1,6 +1,6 @@
-namespace CPMS.Proxy.Models.Cpms.Requests;
+namespace CPMS.Core.Models.Requests;
 
-public class StatusNotificationCpmsRequest : BaseMessage
+public class StatusNotificationRequest : BaseMessage
 {
     public string OcppChargerId { get; set; }
     public int OcppEvseId { get; set; }

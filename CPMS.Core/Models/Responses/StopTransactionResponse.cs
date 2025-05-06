@@ -1,6 +1,6 @@
-namespace CPMS.Proxy.Models.Cpms.Responses;
+namespace CPMS.Core.Models.Responses;
 
-public class StopTransactionCpmsResponse
+public class StopTransactionResponse
 {
     public int? SessionId { get; set; }
     public double? MeterStop { get; set; }

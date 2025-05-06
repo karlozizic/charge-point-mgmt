@@ -10,11 +10,11 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
-      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\CPMS.BuildingBlocks\CPMS.BuildingBlocks.csproj" />
+      <ProjectReference Include="..\CPMS.Core\CPMS.Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -29,6 +29,11 @@
 
     <ItemGroup>
       <Compile Remove="Models\ChargePoint.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Models\Cpms\Requests\" />
+      <Folder Include="Models\Cpms\Responses\" />
     </ItemGroup>
 
 </Project>

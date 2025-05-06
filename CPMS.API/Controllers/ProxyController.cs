@@ -1,6 +1,15 @@
+using Microsoft.AspNetCore.Mvc;
+
 namespace CPMS.API.Controllers;
 
-public class ProxyController
+[ApiController]
+[Route("api/[controller]")]
+public class ProxyController : ControllerBase
 {
+    public ProxyController()
+    {
+        
+    }
+    
     
 }

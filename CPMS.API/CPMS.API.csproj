@@ -13,6 +13,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CPMS.BuildingBlocks\CPMS.BuildingBlocks.csproj" />
+      <ProjectReference Include="..\CPMS.Core\CPMS.Core.csproj" />
     </ItemGroup>
 
 </Project>

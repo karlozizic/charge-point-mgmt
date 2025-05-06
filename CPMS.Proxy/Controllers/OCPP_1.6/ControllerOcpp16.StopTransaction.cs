@@ -1,7 +1,8 @@
+using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
-using CPMS.Proxy.Models.Cpms.Responses;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
+using StopTransactionResponse = CPMS.Core.Models.Responses.StopTransactionResponse;
 
 namespace CPMS.Proxy.Controllers.OCPP_1._6;
 
@@ -15,7 +16,7 @@ public partial class ControllerOcpp16
             StopTransactionRequest stopTransactionRequest = JsonConvert.DeserializeObject<StopTransactionRequest>(msgIn.JsonPayload) ?? throw new InvalidOperationException(); 
             Logger.Info("StopTransaction => Message deserialized");
             
-            StopTransactionCpmsResponse stopTransactionChargerResponse = new StopTransactionCpmsResponse
+            StopTransactionResponse stopTransactionChargerResponse = new StopTransactionResponse
                 {
                     SessionId = stopTransactionRequest.TransactionId,
                     StopTagId = stopTransactionRequest.IdTag,
@@ -24,8 +25,8 @@ public partial class ControllerOcpp16
                     TimeStop = stopTransactionRequest.Timestamp.UtcDateTime
                 };
             
-            StopTransactionResponse stopTransactionResponse = await _cpmsClient.StopTransaction(stopTransactionChargerResponse);
-            StopTransactionResponse stopTransactionResponseProxy = new StopTransactionResponse
+            Proxy.OCPP_1._6.StopTransactionResponse stopTransactionResponse = await _cpmsClient.StopTransaction(stopTransactionChargerResponse);
+            Proxy.OCPP_1._6.StopTransactionResponse stopTransactionResponseProxy = new Proxy.OCPP_1._6.StopTransactionResponse
             {
                 IdTagInfo = new IdTagInfo
                 {

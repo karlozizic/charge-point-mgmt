@@ -1,6 +1,6 @@
-namespace CPMS.Proxy.Models.Cpms.Requests;
+namespace CPMS.Core.Models.Requests;
 
-public class MeterValuesCpmsRequest : BaseMessage
+public class MeterValuesRequest : BaseMessage
 {
     public int TransactionId { get; set; }
     public string TransactionStringId { get; set; }

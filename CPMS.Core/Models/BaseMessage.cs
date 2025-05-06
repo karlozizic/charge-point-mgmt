@@ -1,4 +1,4 @@
-namespace CPMS.Proxy.Models;
+namespace CPMS.Core.Models;
 
 public class BaseMessage
 {

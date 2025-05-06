@@ -1,10 +1,16 @@
 using System.Net.Http.Json;
 using CPMS.BuildingBlocks.Infrastructure.Logger;
+using CPMS.Core.Models.Requests;
+using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
-using CPMS.Proxy.Models.Cpms.Requests;
-using CPMS.Proxy.Models.Cpms.Responses;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
+using BootNotificationRequest = CPMS.Core.Models.Requests.BootNotificationRequest;
+using ClearChargingProfileResponse = CPMS.Core.Models.Responses.ClearChargingProfileResponse;
+using MeterValuesRequest = CPMS.Core.Models.Requests.MeterValuesRequest;
+using SetChargingProfileResponse = CPMS.Core.Models.Responses.SetChargingProfileResponse;
+using StatusNotificationRequest = CPMS.Core.Models.Requests.StatusNotificationRequest;
+using StopTransactionResponse = CPMS.Core.Models.Responses.StopTransactionResponse;
 
 namespace CPMS.Proxy.Services;
 
@@ -22,15 +28,15 @@ public class CpmsClient : ICpmsClient
         _loggerService = loggerService;
     }
 
-    public async Task<AuthorizeChargerResponse> Authorize(AuthorizeChargerCpmsRequest authorizeChargerCpmsRequest)
+    public async Task<AuthorizeChargerResponse> Authorize(AuthorizeChargerRequest authorizeChargerRequest)
     {
         try
         {
-            _loggerService.Info($"Sending request {JsonConvert.SerializeObject(authorizeChargerCpmsRequest)} to CPMS API");
+            _loggerService.Info($"Sending request {JsonConvert.SerializeObject(authorizeChargerRequest)} to CPMS API");
             
             var response = await _client.PostAsJsonAsync(
                 $"{ApiPath}/Authorize", 
-                authorizeChargerCpmsRequest);
+                authorizeChargerRequest);
 
             response.EnsureSuccessStatusCode();
 
@@ -47,7 +53,7 @@ public class CpmsClient : ICpmsClient
         }
     }
 
-    public async Task BootNotification(BootNotificationCpmsRequest bootNotificationRequest)
+    public async Task BootNotification(BootNotificationRequest bootNotificationRequest)
     {
         try
         {
@@ -61,7 +67,7 @@ public class CpmsClient : ICpmsClient
         }
     }
 
-    public async Task ChargingProfileCleared(ClearChargingProfileCpmsResponse response)
+    public async Task ChargingProfileCleared(ClearChargingProfileResponse response)
     {
         try
         {
@@ -75,7 +81,7 @@ public class CpmsClient : ICpmsClient
         }
     }
 
-    public async Task MeterValues(MeterValuesCpmsRequest meterValuesRequest)
+    public async Task MeterValues(MeterValuesRequest meterValuesRequest)
     {
         try
         {
@@ -103,7 +109,7 @@ public class CpmsClient : ICpmsClient
         }
     }
 
-    public async Task ChargingProfileSet(SetChargingProfileCpmsResponse setChargingProfileResponse)
+    public async Task ChargingProfileSet(SetChargingProfileResponse setChargingProfileResponse)
     {
         try
         {
@@ -133,7 +139,7 @@ public class CpmsClient : ICpmsClient
         }
     }
 
-    public async Task StatusNotification(StatusNotificationCpmsRequest statusNotificationRequest)
+    public async Task StatusNotification(StatusNotificationRequest statusNotificationRequest)
     {
         try
         {
@@ -147,14 +153,14 @@ public class CpmsClient : ICpmsClient
         }
     }
 
-    public async Task<StopTransactionResponse> StopTransaction(StopTransactionCpmsResponse response)
+    public async Task<OCPP_1._6.StopTransactionResponse> StopTransaction(StopTransactionResponse response)
     {
         try
         {
             _loggerService.Info($"Sending request {response} to CPMS API");
             var stopTransactionResponse = await _client.PostAsJsonAsync($"{ApiPath}/StopTransaction", response);
             _loggerService.Info($"Received response {await stopTransactionResponse.Content.ReadAsStringAsync()} from CPMS API");
-            return await stopTransactionResponse.Content.ReadFromJsonAsync<StopTransactionResponse>() ?? throw new InvalidOperationException();
+            return await stopTransactionResponse.Content.ReadFromJsonAsync<OCPP_1._6.StopTransactionResponse>() ?? throw new InvalidOperationException();
         }
         catch (Exception ex)
         {
@@ -180,14 +186,14 @@ public class CpmsClient : ICpmsClient
 
 public interface ICpmsClient
 {
-    Task<AuthorizeChargerResponse> Authorize(AuthorizeChargerCpmsRequest authorizeChargerCpmsRequest);
-    Task BootNotification(BootNotificationCpmsRequest bootNotificationRequest);
-    Task ChargingProfileCleared(ClearChargingProfileCpmsResponse response);
-    Task MeterValues(MeterValuesCpmsRequest meterValuesRequest);
+    Task<AuthorizeChargerResponse> Authorize(AuthorizeChargerRequest authorizeChargerRequest);
+    Task BootNotification(BootNotificationRequest bootNotificationRequest);
+    Task ChargingProfileCleared(ClearChargingProfileResponse response);
+    Task MeterValues(MeterValuesRequest meterValuesRequest);
     Task Reset(ResetChargerResponse resetResponse);
-    Task ChargingProfileSet(SetChargingProfileCpmsResponse setChargingProfileResponse);
+    Task ChargingProfileSet(SetChargingProfileResponse setChargingProfileResponse);
     Task<StartTransactionResponse> StartTransaction(StartTransactionChargerResponse response);
-    Task StatusNotification(StatusNotificationCpmsRequest statusNotificationRequest);
-    Task<StopTransactionResponse> StopTransaction(StopTransactionCpmsResponse response);
+    Task StatusNotification(StatusNotificationRequest statusNotificationRequest);
+    Task<OCPP_1._6.StopTransactionResponse> StopTransaction(StopTransactionResponse response);
     Task ConnectorUnlocked(ConnectorUnlockedResponse response);
 }
