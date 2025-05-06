@@ -1,3 +1,58 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿
+using CPMS.BuildingBlocks.Infrastructure.Logger;
+using CPMS.Proxy.Configuration;
+using CPMS.Proxy.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.WebSockets;
+using Microsoft.Extensions.DependencyInjection;
 
-Console.WriteLine("Hello, World!");
+var builder = WebApplication.CreateBuilder(args);
+var configuration = builder.Configuration;
+
+#region Services
+
+builder.Services.AddScoped<ILoggerService, LoggerService>();
+builder.Services.AddHttpClient<ICpmsClient, CpmsClient>((serviceProvider, client) =>
+{
+    var baseUrl = configuration["CpmsApi:BaseUrl"];
+    client.BaseAddress = new Uri(baseUrl);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+#endregion
+
+// change once in prod
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
+builder.Services.AddWebSockets(options =>
+{
+    options.KeepAliveInterval = TimeSpan.FromMinutes(2);
+});
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.UseWebSockets();
+
+app.UseCors("AllowAll");
+//todo: middleware reference?
+app.UseOCPPMiddleware();
+
+app.UseRouting();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+});
+
+await app.RunAsync();
