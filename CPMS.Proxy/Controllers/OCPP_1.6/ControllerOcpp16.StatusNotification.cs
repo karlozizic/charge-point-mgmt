@@ -1,4 +1,3 @@
-using CPMS.Core.Models.Requests;
 using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
@@ -24,12 +23,12 @@ public partial class ControllerOcpp16
                 StatusNotificationRequest statusNotificationChargerRequest =
                     new StatusNotificationRequest
                     {
-                        OcppChargerId = ChargePointStatus.Id,
+                        //
+                        OcppChargerId = new Guid(ChargePointStatus.Id),
                         OcppEvseId = 0,
                         OcppConnectorId = statusNotificationRequest.ConnectorId,
                         LastStatus = statusNotificationRequest.Status.ToString(),
                         LastStatusTime = (statusNotificationRequest.Timestamp ?? DateTimeOffset.UtcNow).DateTime,
-                        ChargerId = new Guid(ChargePointStatus.Id),
                         Protocol = ChargePointStatus.Protocol
                     };
 

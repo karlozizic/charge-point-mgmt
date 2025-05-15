@@ -1,7 +1,9 @@
 using CPMS.API.BusinessRules;
 using CPMS.API.DomainRules;
 using CPMS.API.Events.ChargePoint;
+using CPMS.API.Events.Connector;
 using CPMS.BuildingBlocks.Domain;
+using ConnectorStatusChangedEvent = CPMS.API.Events.ChargePoint.ConnectorStatusChangedEvent;
 
 namespace CPMS.API.Entities;
 
@@ -30,7 +32,7 @@ public class ChargePoint : Entity, IAggregateRoot
             name,
             locationId,
             maxPower,
-            currentPower
+            0.0d
         );
 
         AddDomainEvent(@event);
@@ -46,7 +48,7 @@ public class ChargePoint : Entity, IAggregateRoot
         CurrentPower = @event.CurrentPower;
     }
 
-    public void AddConnector(Guid connectorId, string name)
+    public void AddConnector(int connectorId, string name)
     {
         CheckRule(new ConnectorMustHaveUniqueIdRule(connectorId, _connectors));
 
@@ -61,7 +63,7 @@ public class ChargePoint : Entity, IAggregateRoot
         _connectors.Add(new Connector(@event.ConnectorId, @event.ConnectorName));
     }
 
-    public void UpdateConnectorStatus(Guid connectorId, string status)
+    public void UpdateConnectorStatus(int connectorId, string status)
     {
         var connector = _connectors.SingleOrDefault(c => c.Id == connectorId);
         if (connector == null)
@@ -77,5 +79,86 @@ public class ChargePoint : Entity, IAggregateRoot
     {
         var connector = _connectors.Single(c => c.Id == @event.ConnectorId);
         connector.UpdateStatus(@event.Status, @event.Timestamp);
+    }
+    
+    public void RegisterBoot(
+        string serial,
+        string model,
+        string vendor,
+        string firmwareVersion)
+    {
+        var @event = new ChargePointBootedEvent(
+            Id,
+            serial,
+            model,
+            vendor,
+            firmwareVersion,
+            DateTime.UtcNow
+        );
+        
+        AddDomainEvent(@event);
+        Apply(@event);
+    }
+
+    private void Apply(ChargePointBootedEvent @event)
+    {
+        // TODO
+        Console.WriteLine($"ChargePoint {Id} booted with serial { @event.Serial}");
+    }
+    
+    public void LogConnectorError(int connectorId, string errorCode, string info)
+    {
+        var @event = new ConnectorErrorLoggedEvent(
+            Id,
+            connectorId,
+            errorCode,
+            info,
+            DateTime.UtcNow
+        );
+        
+        AddDomainEvent(@event);
+        Apply(@event);
+    }
+    
+    private void Apply(ConnectorErrorLoggedEvent @event)
+    {
+        var connector = _connectors.SingleOrDefault(c => c.Id == @event.ConnectorId);
+        if (connector != null)
+        {
+            connector.LogError(@event.ErrorCode, @event.Info, @event.Timestamp);
+        }
+    }
+    
+    public void UpdateChargingProfile(int profileId, string profileData)
+    {
+        var @event = new ChargingProfileUpdatedEvent(
+            Id,
+            profileId,
+            profileData
+        );
+        
+        AddDomainEvent(@event);
+        Apply(@event);
+    }
+    
+    private void Apply(ChargingProfileUpdatedEvent @event)
+    {
+        //TODO Ažuriranje charging profile podataka
+    }
+    
+    public void Reset(string resetType)
+    {
+        var @event = new ChargePointResetEvent(
+            Id,
+            resetType
+        );
+        
+        AddDomainEvent(@event);
+        Apply(@event);
+    }
+    
+    private void Apply(ChargePointResetEvent @event)
+    {
+        //TODO Možemo resetirati statuse konektora ili druge informacije
     }
 }

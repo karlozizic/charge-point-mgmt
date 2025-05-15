@@ -8,7 +8,7 @@ var configuration = builder.Configuration;
 
 #region Services
 
-builder.Services.AddScoped<ILoggerService, LoggerService>();
+builder.Services.AddSingleton<ILoggerService, LoggerService>();
 builder.Services.AddHttpClient<ICpmsClient, CpmsClient>((serviceProvider, client) =>
 {
     var baseUrl = configuration["CpmsApi:BaseUrl"];

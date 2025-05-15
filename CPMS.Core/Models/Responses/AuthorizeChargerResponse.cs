@@ -1,11 +1,12 @@
+
 namespace CPMS.Core.Models.Responses;
 
 public class AuthorizeChargerResponse
 { 
-    public IdTagStatus AuthorizationStatus { get; set; }
+    public AuthorizationStatus AuthorizationStatus { get; set; }
 }
 
-public enum IdTagStatus
+public enum AuthorizationStatus
 {
     [System.Runtime.Serialization.EnumMember(Value = @"Accepted")]
     Accepted = 0,

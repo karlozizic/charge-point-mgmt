@@ -31,9 +31,4 @@
       <Compile Remove="Models\ChargePoint.cs" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Models\Cpms\Requests\" />
-      <Folder Include="Models\Cpms\Responses\" />
-    </ItemGroup>
-
 </Project>

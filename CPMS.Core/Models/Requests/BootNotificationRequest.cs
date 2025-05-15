@@ -1,6 +1,8 @@
+using MediatR;
+
 namespace CPMS.Core.Models.Requests;
 
-public class BootNotificationRequest : BaseMessage
+public class BootNotificationRequest : BaseMessage, IRequest<bool>
 {
     [Newtonsoft.Json.JsonProperty("chargePointVendor", Required = Newtonsoft.Json.Required.Always)]
     [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]

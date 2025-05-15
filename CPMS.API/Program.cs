@@ -2,6 +2,7 @@ using CPMS.API.Handlers;
 using CPMS.API.Handlers.ChargePoint;
 using CPMS.API.Projections;
 using CPMS.API.Repositories;
+using CPMS.BuildingBlocks.Infrastructure.Logger;
 using Marten;
 using Marten.Events.Daemon.Resiliency;
 using Marten.Events.Projections;
@@ -13,6 +14,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddMediatR(cfg => {
+    //todo
     cfg.RegisterServicesFromAssembly(typeof(CreateChargePointCommandHandler).Assembly);
 });
 
@@ -20,12 +22,17 @@ builder.Services.AddMarten(options => {
         options.Connection(builder.Configuration.GetConnectionString("MartenDb") ?? string.Empty);
         
         options.UseNewtonsoftForSerialization();
+        
         options.Projections.Add<ChargePointProjection>(ProjectionLifecycle.Inline);
+        options.Projections.Add<ChargeSessionProjection>(ProjectionLifecycle.Inline);
+        options.Projections.Add<ChargeTagProjection>(ProjectionLifecycle.Inline);
     })
     .UseLightweightSessions()
     .AddAsyncDaemon(DaemonMode.Solo);
 
+builder.Services.AddSingleton<ILoggerService, LoggerService>();
 builder.Services.AddScoped<IChargePointRepository, ChargePointRepository>();
+builder.Services.AddScoped<IChargeSessionRepository, ChargeSessionRepository>();
 
 var app = builder.Build();
 

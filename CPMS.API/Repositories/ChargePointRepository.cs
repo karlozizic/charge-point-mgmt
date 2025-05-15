@@ -3,35 +3,42 @@ using Marten;
 
 namespace CPMS.API.Repositories;
 
-public class ChargePointRepository(IDocumentSession session) : IChargePointRepository
+public class ChargePointRepository : IChargePointRepository
 {
+    private readonly IDocumentSession _session;
+
+    public ChargePointRepository(IDocumentSession session)
+    {
+        _session = session;
+    }
+
     public async Task<ChargePoint?> GetByIdAsync(Guid id)
     {
-        return await session.Events.AggregateStreamAsync<ChargePoint>(id);
+        return await _session.Events.AggregateStreamAsync<ChargePoint>(id);
     }
         
     public async Task AddAsync(ChargePoint chargePoint)
     {
         foreach (var domainEvent in chargePoint.DomainEvents)
         {
-            session.Events.Append(chargePoint.Id, domainEvent);
+            _session.Events.Append(chargePoint.Id, domainEvent);
         }
             
         chargePoint.ClearDomainEvents();
             
-        await session.SaveChangesAsync();
+        await _session.SaveChangesAsync();
     }
         
     public async Task UpdateAsync(ChargePoint chargePoint)
     {
         foreach (var domainEvent in chargePoint.DomainEvents)
         {
-            session.Events.Append(chargePoint.Id, domainEvent);
+            _session.Events.Append(chargePoint.Id, domainEvent);
         }
             
         chargePoint.ClearDomainEvents();
             
-        await session.SaveChangesAsync();
+        await _session.SaveChangesAsync();
     }
 }
 

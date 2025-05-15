@@ -5,10 +5,10 @@ namespace CPMS.API.BusinessRules;
 
 public class ConnectorMustHaveUniqueIdRule : IBusinessRule
 {
-    private readonly Guid _connectorId;
+    private readonly int _connectorId;
     private readonly IEnumerable<Connector> _existingConnectors;
         
-    public ConnectorMustHaveUniqueIdRule(Guid connectorId, IEnumerable<Connector> existingConnectors)
+    public ConnectorMustHaveUniqueIdRule(int connectorId, IEnumerable<Connector> existingConnectors)
     {
         _connectorId = connectorId;
         _existingConnectors = existingConnectors;

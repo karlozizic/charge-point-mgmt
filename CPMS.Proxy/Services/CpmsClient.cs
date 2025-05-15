@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using CPMS.BuildingBlocks.Infrastructure.Logger;
+using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Requests;
 using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
@@ -10,7 +11,6 @@ using ClearChargingProfileResponse = CPMS.Core.Models.Responses.ClearChargingPro
 using MeterValuesRequest = CPMS.Core.Models.Requests.MeterValuesRequest;
 using SetChargingProfileResponse = CPMS.Core.Models.Responses.SetChargingProfileResponse;
 using StatusNotificationRequest = CPMS.Core.Models.Requests.StatusNotificationRequest;
-using StopTransactionResponse = CPMS.Core.Models.Responses.StopTransactionResponse;
 
 namespace CPMS.Proxy.Services;
 
@@ -153,14 +153,14 @@ public class CpmsClient : ICpmsClient
         }
     }
 
-    public async Task<OCPP_1._6.StopTransactionResponse> StopTransaction(StopTransactionResponse response)
+    public async Task<StopTransactionResponse> StopTransaction(StopTransactionCpmsRequest cpmsRequest)
     {
         try
         {
-            _loggerService.Info($"Sending request {response} to CPMS API");
-            var stopTransactionResponse = await _client.PostAsJsonAsync($"{ApiPath}/StopTransaction", response);
+            _loggerService.Info($"Sending request {cpmsRequest} to CPMS API");
+            var stopTransactionResponse = await _client.PostAsJsonAsync($"{ApiPath}/StopTransaction", cpmsRequest);
             _loggerService.Info($"Received response {await stopTransactionResponse.Content.ReadAsStringAsync()} from CPMS API");
-            return await stopTransactionResponse.Content.ReadFromJsonAsync<OCPP_1._6.StopTransactionResponse>() ?? throw new InvalidOperationException();
+            return await stopTransactionResponse.Content.ReadFromJsonAsync<StopTransactionResponse>() ?? throw new InvalidOperationException();
         }
         catch (Exception ex)
         {
@@ -194,6 +194,6 @@ public interface ICpmsClient
     Task ChargingProfileSet(SetChargingProfileResponse setChargingProfileResponse);
     Task<StartTransactionResponse> StartTransaction(StartTransactionChargerResponse response);
     Task StatusNotification(StatusNotificationRequest statusNotificationRequest);
-    Task<OCPP_1._6.StopTransactionResponse> StopTransaction(StopTransactionResponse response);
+    Task<StopTransactionResponse> StopTransaction(StopTransactionCpmsRequest cpmsRequest);
     Task ConnectorUnlocked(ConnectorUnlockedResponse response);
 }

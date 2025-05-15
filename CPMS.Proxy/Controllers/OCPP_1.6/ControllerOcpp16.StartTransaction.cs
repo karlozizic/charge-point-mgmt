@@ -1,3 +1,4 @@
+using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
@@ -28,15 +29,15 @@ public partial class ControllerOcpp16
             StartTransactionResponse startTransactionResponse = await _cpmsClient.StartTransaction(startTransaction);
             
             StartTransactionResponse startTransactionResponseProxy = new StartTransactionResponse
+            {
+                TransactionId = startTransactionResponse.TransactionId,
+                IdTagInfo = new IdTagInfo
                 {
-                    TransactionId = startTransactionResponse.TransactionId,
-                    IdTagInfo = new IdTagInfo
-                    {
-                        ParentIdTag = startTransactionResponse.IdTagInfo.ParentIdTag,
-                        Status = startTransactionResponse.IdTagInfo.Status,
-                        ExpiryDate = startTransactionResponse.IdTagInfo.ExpiryDate
-                    }
-                };
+                    ParentIdTag = startTransactionResponse.IdTagInfo.ParentIdTag,
+                    Status = startTransactionResponse.IdTagInfo.Status,
+                    ExpiryDate = startTransactionResponse.IdTagInfo.ExpiryDate
+                }
+            };
 
             msgOut.JsonPayload = JsonConvert.SerializeObject(startTransactionResponseProxy);
             Logger.Info($"StartTransaction => Response serialized {msgOut.JsonPayload}");

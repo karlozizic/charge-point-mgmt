@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ControllerOcpp16 = CPMS.Proxy.Controllers.OCPP_1._6.ControllerOcpp16;
 
 namespace CPMS.Proxy.Configuration;
 

@@ -1,3 +1,4 @@
+using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Requests;
 using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
@@ -32,7 +33,6 @@ public partial class ControllerOcpp16
             AuthorizeChargerResponse authorizationChargerResponse = await _cpmsClient.Authorize(authorizeChargerRequest);
 
             authorizeResponse.IdTagInfo.Status = authorizationChargerResponse.AuthorizationStatus;
-            
             msgOut.JsonPayload = JsonConvert.SerializeObject(authorizeResponse);
         }
         catch (Exception exp)

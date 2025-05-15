@@ -16,6 +16,7 @@ public class ChargePointStatus
         Id = chargePointId.ToString();
     }
 
+    //TODO: Charge Point status is casted to Guid in HandleAuthorize
     [JsonProperty("id")]
     public string Id { get; set; }
 

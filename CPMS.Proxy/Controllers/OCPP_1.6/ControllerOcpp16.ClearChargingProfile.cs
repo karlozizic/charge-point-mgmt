@@ -1,4 +1,3 @@
-using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
