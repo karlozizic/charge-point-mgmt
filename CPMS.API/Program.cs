@@ -14,8 +14,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddMediatR(cfg => {
-    //todo
-    cfg.RegisterServicesFromAssembly(typeof(CreateChargePointCommandHandler).Assembly);
+    cfg.RegisterServicesFromAssemblyContaining<Program>();
 });
 
 builder.Services.AddMarten(options => {

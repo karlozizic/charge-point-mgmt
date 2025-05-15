@@ -7,8 +7,6 @@ public class ChargeTag : Entity, IAggregateRoot
 {
     public Guid Id { get; private set; }
     public string TagId { get; private set; } // RFID tag ID string
-    public string TagName { get; private set; }
-    public string ParentTagId { get; private set; }
     public DateTime? ExpiryDate { get; private set; }
     public bool Blocked { get; private set; }
     
@@ -17,16 +15,12 @@ public class ChargeTag : Entity, IAggregateRoot
     public ChargeTag(
         Guid id,
         string tagId,
-        string tagName,
-        string parentTagId = null,
         DateTime? expiryDate = null,
         bool blocked = false)
     {
         var @event = new ChargeTagCreatedEvent(
             id,
             tagId,
-            tagName,
-            parentTagId,
             expiryDate,
             blocked
         );
@@ -39,8 +33,6 @@ public class ChargeTag : Entity, IAggregateRoot
     {
         Id = @event.ChargeTagId;
         TagId = @event.TagId;
-        TagName = @event.TagName;
-        ParentTagId = @event.ParentTagId;
         ExpiryDate = @event.ExpiryDate;
         Blocked = @event.Blocked;
     }
