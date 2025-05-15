@@ -1,6 +1,4 @@
-using CPMS.Core.Models.OCPP_1._6;
-
-namespace CPMS.Proxy.OCPP_1._6;
+namespace CPMS.Core.Models.OCPP_1._6;
 
 public class StartTransactionResponse
 {
@@ -9,5 +7,5 @@ public class StartTransactionResponse
     public IdTagInfo IdTagInfo { get; set; } = new IdTagInfo();
 
     [Newtonsoft.Json.JsonProperty("transactionId", Required = Newtonsoft.Json.Required.Always)]
-    public int TransactionId { get; set; }
+    public int? TransactionId { get; set; }
 }

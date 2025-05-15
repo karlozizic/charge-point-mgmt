@@ -3,12 +3,14 @@ using CPMS.API.Exceptions;
 using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.BuildingBlocks.Domain;
+using CPMS.Core.Models.OCPP_1._6;
+using CPMS.Core.Models.Responses;
 using Marten;
 using MediatR;
 
 namespace CPMS.API.Handlers.ChargeSession;
 
-public class StartTransactionCommand : IRequest<int>
+public class StartTransactionCommand : IRequest<StartTransactionResponse>
 {
     public string OcppChargerId { get; set; }
     public int ConnectorId { get; set; }
@@ -16,7 +18,7 @@ public class StartTransactionCommand : IRequest<int>
     public double MeterStart { get; set; }
 }
 
-public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCommand, int>
+public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCommand, StartTransactionResponse>
 {
     private readonly IChargePointRepository _chargePointRepository;
     private readonly IChargeSessionRepository _chargeSessionRepository;
@@ -33,7 +35,7 @@ public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCo
         _querySession = querySession;
     }
     
-    public async Task<int> Handle(StartTransactionCommand command, CancellationToken cancellationToken)
+    public async Task<StartTransactionResponse> Handle(StartTransactionCommand command, CancellationToken cancellationToken)
     {
         var tag = await _querySession
             .Query<ChargeTagReadModel>()
@@ -68,6 +70,14 @@ public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCo
         chargePoint.UpdateConnectorStatus(connector.Id, "Charging");
         await _chargePointRepository.UpdateAsync(chargePoint);
         
-        return transactionId;
+        return new StartTransactionResponse
+        {
+            TransactionId = transactionId,
+            IdTagInfo = new IdTagInfo
+            {
+                Status = AuthorizationStatus.Accepted,
+                ExpiryDate = (DateTimeOffset)tag.ExpiryDate
+            }
+        };
     }
 }

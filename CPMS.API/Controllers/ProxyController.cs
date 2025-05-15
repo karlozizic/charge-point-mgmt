@@ -49,28 +49,25 @@ public class ProxyController : ControllerBase
     }
     
     [HttpPost]
-    public async Task<ActionResult> StartTransaction(StartTransactionChargerResponse response)
+    public async Task<ActionResult> StartTransaction(StartTransactionChargerResponse request)
     {
-        _logger.Info($"Start transaction response from: {response.OcppChargerId}, TransactionId: {response.TransactionId}");
+        _logger.Info($"Start transaction response from: {request.OcppChargerId}, TransactionId: {request.TransactionId}");
         
         try
         {
-            var transactionId = await _mediator.Send(new StartTransactionCommand
+            var response = await _mediator.Send(new StartTransactionCommand
             {
-                OcppChargerId = response.OcppChargerId,
-                ConnectorId = response.OcppConnectorId,
-                TagId = response.IdTag,
-                MeterStart = response.MeterStart
+                OcppChargerId = request.OcppChargerId,
+                ConnectorId = request.OcppConnectorId,
+                TagId = request.IdTag,
+                MeterStart = request.MeterStart
             });
             
-            return Ok(new
-            {
-                TransactionId = transactionId
-            });
+            return Ok(response);
         }
         catch (BusinessRuleValidationException ex)
         {
-            _logger.Warning($"Business rule validation failed during start transaction for: {response.OcppChargerId} {ex.Message}");
+            _logger.Warning($"Business rule validation failed during start transaction for: {request.OcppChargerId} {ex.Message}");
             return BadRequest(new
             {
                 Error = ex.Message,
@@ -79,7 +76,7 @@ public class ProxyController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.Error($"Error processing start transaction for: {response.OcppChargerId} {ex.Message}");
+            _logger.Error($"Error processing start transaction for: {request.OcppChargerId} {ex.Message}");
             return StatusCode(500, "Internal server error");
         }
     }

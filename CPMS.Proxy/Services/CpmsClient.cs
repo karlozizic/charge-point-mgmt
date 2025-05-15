@@ -135,7 +135,7 @@ public class CpmsClient : ICpmsClient
     {
         try
         {
-            _loggerService.Info($"Sending request {response} to CPMS API");
+            _loggerService.Info($"Sending request {JsonConvert.SerializeObject(response)} to CPMS API");
             var startTransactionResponse = await _client.PostAsJsonAsync($"{ApiPath}/StartTransaction", response);
             _loggerService.Info($"Received response {await startTransactionResponse.Content.ReadAsStringAsync()} from CPMS API");
             return await startTransactionResponse.Content.ReadFromJsonAsync<StartTransactionResponse>() ?? throw new InvalidOperationException();
