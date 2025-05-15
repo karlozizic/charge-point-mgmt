@@ -50,8 +50,10 @@ public partial class ControllerOcpp16
                 FirmwareVersion = bootNotificationRequest.FirmwareVersion,
                 Iccid = bootNotificationRequest.Iccid,
                 Imsi = bootNotificationRequest.Imsi,
-                ChargerId = new Guid(ChargePointStatus.Id),
-                Protocol = ChargePointStatus.Protocol
+                OcppChargerId = ChargePointStatus.Id,
+                Protocol = ChargePointStatus.Protocol,
+                MeterType = bootNotificationRequest.MeterType,
+                MeterSerialNumber = bootNotificationRequest.MeterSerialNumber
             };
             
             await _cpmsClient.BootNotification(bootNotificationCpmsRequest);

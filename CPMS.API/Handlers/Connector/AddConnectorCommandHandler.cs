@@ -6,7 +6,7 @@ namespace CPMS.API.Handlers.Connector;
 
 public class AddConnectorCommand : IRequest
 {
-    public Guid ChargePointId { get; set; }
+    public string OcppChargerId { get; set; }
     public string Name { get; set; }
 }
     
@@ -24,8 +24,8 @@ public class AddConnectorCommandHandler : IRequestHandler<AddConnectorCommand>
         
     public async Task Handle(AddConnectorCommand command, CancellationToken cancellationToken)
     {
-        var chargePointId = command.ChargePointId;
-        var chargePoint = await _repository.GetByIdAsync(chargePointId);
+        var chargePointId = command.OcppChargerId;
+        var chargePoint = await _repository.GetByOcppChargerIdAsync(chargePointId);
 
         if (chargePoint == null)
         {

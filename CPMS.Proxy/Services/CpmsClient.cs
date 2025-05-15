@@ -57,8 +57,16 @@ public class CpmsClient : ICpmsClient
     {
         try
         {
-            _loggerService.Info($"Sending request {bootNotificationRequest} to CPMS API");
+            var jsonRequest = JsonConvert.SerializeObject(bootNotificationRequest, Formatting.Indented);
+            _loggerService.Info($"Sending BootNotification JSON: {jsonRequest}");
+        
             var response = await _client.PutAsJsonAsync($"{ApiPath}/BootNotification", bootNotificationRequest);
+        
+            var statusCode = (int)response.StatusCode;
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _loggerService.Info($"Received response: StatusCode={statusCode}, Content={responseContent}");
+        
+            response.EnsureSuccessStatusCode();
         }
         catch (Exception ex)
         {

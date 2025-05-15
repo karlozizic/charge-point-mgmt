@@ -6,7 +6,7 @@ namespace CPMS.API.Handlers.ChargeSession;
 
 public class BootNotificationCommand : IRequest<bool>
 {
-    public Guid ChargerId { get; set; }
+    public string OcppChargerId { get; set; }
     public string Protocol { get; set; }
     public string ChargePointVendor { get; set; }
     public string ChargePointModel { get; set; }
@@ -20,7 +20,7 @@ public class BootNotificationCommand : IRequest<bool>
 
     public BootNotificationCommand(BootNotificationRequest bootNotificationRequest)
     {
-        ChargerId = bootNotificationRequest.ChargerId;
+        OcppChargerId = bootNotificationRequest.OcppChargerId;
         Protocol = bootNotificationRequest.Protocol;
         ChargePointVendor = bootNotificationRequest.ChargePointVendor;
         ChargePointModel = bootNotificationRequest.ChargePointModel;
@@ -45,7 +45,7 @@ public class RegisterBootNotificationCommandHandler : IRequestHandler<BootNotifi
     
     public async Task<bool> Handle(BootNotificationCommand request, CancellationToken cancellationToken)
     {
-        var chargePoint = await _chargePointRepository.GetByIdAsync(request.ChargerId);
+        var chargePoint = await _chargePointRepository.GetByOcppChargerIdAsync(request.OcppChargerId);
             
         if (chargePoint == null)
         {

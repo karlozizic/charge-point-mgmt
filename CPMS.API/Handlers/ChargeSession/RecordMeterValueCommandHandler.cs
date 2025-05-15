@@ -6,7 +6,7 @@ namespace CPMS.API.Handlers.ChargeSession;
 
 public class MeterValuesCommand : IRequest
 {
-    public Guid ChargerId { get; set; }
+    public string OcppChargerId { get; set; }
     public int TransactionId { get; set; }
     public double? CurrentPower { get; private set; }
     public double? EnergyConsumed { get; private set; }
@@ -15,7 +15,7 @@ public class MeterValuesCommand : IRequest
     
     public MeterValuesCommand(MeterValuesRequest request)
     {
-        ChargerId = request.ChargerId;
+        OcppChargerId = request.OcppChargerId;
         TransactionId = request.TransactionId;
         CurrentPower = request.CurrentPower;
         EnergyConsumed = request.EnergyConsumed;

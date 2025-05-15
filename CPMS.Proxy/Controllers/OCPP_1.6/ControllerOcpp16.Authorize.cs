@@ -26,7 +26,7 @@ public partial class ControllerOcpp16
             AuthorizeChargerRequest authorizeChargerRequest = new AuthorizeChargerRequest
             {
                 IdTag = authorizeRequest.IdTag,
-                ChargerId = new Guid(ChargePointStatus.Id),
+                OcppChargerId = ChargePointStatus.Id,
                 Protocol = ChargePointStatus.Protocol
             };
 

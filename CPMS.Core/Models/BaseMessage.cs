@@ -2,6 +2,6 @@ namespace CPMS.Core.Models;
 
 public class BaseMessage
 {
-    public Guid ChargerId { get; set; }
+    public string OcppChargerId { get; set; }
     public string Protocol { get; set; }
 }

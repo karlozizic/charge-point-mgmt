@@ -5,7 +5,7 @@ namespace CPMS.API.Handlers.ChargePoint;
 
 public class CreateChargePointCommand : IRequest<Guid>
 {
-    public string Name { get; set; }
+    public string OcppChargerId { get; set; }
     public Guid LocationId { get; set; }
     public double? MaxPower { get; set; }
 }
@@ -26,7 +26,7 @@ public class CreateChargePointCommandHandler : IRequestHandler<CreateChargePoint
             
         var chargePoint = new Entities.ChargePoint(
             chargePointId, 
-            command.Name, 
+            command.OcppChargerId, 
             locationId, 
             command.MaxPower,
             null);

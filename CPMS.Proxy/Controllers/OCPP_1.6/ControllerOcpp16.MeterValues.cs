@@ -26,7 +26,7 @@ public partial class ControllerOcpp16
             }
                 
             MeterValuesRequest meterValues = ProcessMeterValues(meterValueRequest);
-            meterValues.ChargerId = new Guid(ChargePointStatus.Id);
+            meterValues.OcppChargerId = ChargePointStatus.Id;
             meterValues.Protocol = ChargePointStatus.Protocol;
             meterValues.TransactionId = meterValueRequest.TransactionId;
             

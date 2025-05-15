@@ -28,6 +28,8 @@ public partial class ControllerOcpp16 : BaseController
         };
 
         string? errorCode = null;
+        
+        Logger.Info($"Received message: Action={msgIn.Action}, UniqueId={msgIn.UniqueId}, MessageType={msgIn.MessageType}");
 
         switch (msgIn.Action)
         {

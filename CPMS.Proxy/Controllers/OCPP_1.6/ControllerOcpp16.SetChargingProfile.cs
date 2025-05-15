@@ -20,7 +20,7 @@ public partial class ControllerOcpp16
         
         SetChargingProfileResponse setChargingProfileResponseProxy = new SetChargingProfileResponse
             {
-                ChargerId = new Guid(ChargePointStatus.Id),
+                OcppChargerId = ChargePointStatus.Id,
                 Status = setChargingProfileResponse.Status.ToString()
             };
 

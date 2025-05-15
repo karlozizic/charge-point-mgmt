@@ -15,7 +15,7 @@ public partial class ControllerOcpp16
         ResetChargerResponse resetChargerResponse = new ResetChargerResponse
         {
             Status = resetResponse.Status.ToString(),
-            ChargerId = new Guid(ChargePointStatus.Id),
+            OcppChargerId = ChargePointStatus.Id,
             Protocol = ChargePointStatus.Protocol
         };
         

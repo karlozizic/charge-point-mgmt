@@ -10,7 +10,7 @@ namespace CPMS.API.Entities;
 public class ChargePoint : Entity, IAggregateRoot
 {
     public Guid Id { get; private set; }
-    public string Name { get; private set; }
+    public string OcppChargerId { get; private set; }
     public Guid LocationId { get; private set; }
     public double? MaxPower { get; private set; }
     public double? CurrentPower { get; private set; }
@@ -22,14 +22,14 @@ public class ChargePoint : Entity, IAggregateRoot
     {
     }
 
-    public ChargePoint(Guid id, string name, Guid locationId,
+    public ChargePoint(Guid id, string ocppChargerId, Guid locationId,
         double? maxPower, double? currentPower)
     {
-        CheckRule(new ChargePointMustHaveValidNameRule(name));
+        CheckRule(new ChargePointMustHaveValidNameRule(ocppChargerId));
 
         var @event = new ChargePointCreatedEvent(
             id,
-            name,
+            ocppChargerId,
             locationId,
             maxPower,
             0.0d
@@ -42,7 +42,7 @@ public class ChargePoint : Entity, IAggregateRoot
     private void Apply(ChargePointCreatedEvent @event)
     {
         Id = @event.ChargePointId;
-        Name = @event.Name;
+        OcppChargerId = @event.OcppChargerId;
         LocationId = @event.LocationId;
         MaxPower = @event.MaxPower;
         CurrentPower = @event.CurrentPower;

@@ -6,6 +6,7 @@ namespace CPMS.API.Handlers.Connector;
 
 public class UpdateConnectorStatusCommand : IRequest
 {
+    public string OcppChargerId { get; set; }
     public Guid ChargePointId { get; set; }
     public int ConnectorId { get; set; }
     public string Status { get; set; }
@@ -30,7 +31,7 @@ public class UpdateConnectorStatusCommandHandler : IRequestHandler<UpdateConnect
     {
         try
         {
-            var chargePoint = await _chargePointRepository.GetByIdAsync(command.ChargePointId);
+            var chargePoint = await _chargePointRepository.GetByOcppChargerIdAsync(command.OcppChargerId);
 
             if (chargePoint == null)
             {

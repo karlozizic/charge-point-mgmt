@@ -23,8 +23,7 @@ public partial class ControllerOcpp16
                 StatusNotificationRequest statusNotificationChargerRequest =
                     new StatusNotificationRequest
                     {
-                        //
-                        OcppChargerId = new Guid(ChargePointStatus.Id),
+                        OcppChargerId = ChargePointStatus.Id,
                         OcppEvseId = 0,
                         OcppConnectorId = statusNotificationRequest.ConnectorId,
                         LastStatus = statusNotificationRequest.Status.ToString(),

@@ -10,7 +10,7 @@ namespace CPMS.API.Handlers.ChargeSession;
 
 public class StartTransactionCommand : IRequest<int>
 {
-    public string ChargerId { get; set; }
+    public string OcppChargerId { get; set; }
     public int ConnectorId { get; set; }
     public string TagId { get; set; }
     public double MeterStart { get; set; }
@@ -42,15 +42,15 @@ public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCo
         if (tag == null || tag.Blocked || (tag.ExpiryDate.HasValue && tag.ExpiryDate.Value <= DateTime.UtcNow))
             throw new BusinessRuleValidationException(new TagNotValidRule(command.TagId));
         
-        var chargePoint = await _chargePointRepository.GetByIdAsync(new Guid(command.ChargerId));
+        var chargePoint = await _chargePointRepository.GetByOcppChargerIdAsync(command.OcppChargerId);
         
         if (chargePoint == null)
-            throw new NotFoundException($"Charge point {command.ChargerId} not found");
+            throw new NotFoundException($"Charge point {command.OcppChargerId} not found");
         
         var connector = chargePoint.Connectors.FirstOrDefault(c => c.Id == command.ConnectorId);
             
         if (connector == null)
-            throw new NotFoundException($"Connector {command.ConnectorId} not found on charge point {command.ChargerId}");
+            throw new NotFoundException($"Connector {command.ConnectorId} not found on charge point {command.OcppChargerId}");
         
         var sessionId = Guid.NewGuid();
         var transactionId = _random.Next(1, 1000000);

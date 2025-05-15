@@ -1,4 +1,5 @@
 using CPMS.API.Entities;
+using CPMS.API.Projections;
 using Marten;
 
 namespace CPMS.API.Repositories;
@@ -15,6 +16,17 @@ public class ChargePointRepository : IChargePointRepository
     public async Task<ChargePoint?> GetByIdAsync(Guid id)
     {
         return await _session.Events.AggregateStreamAsync<ChargePoint>(id);
+    }
+
+    public async Task<ChargePoint?> GetByOcppChargerIdAsync(string ocppChargerId)
+    {
+        var readModel = await _session.Query<ChargePointReadModel>()
+            .FirstOrDefaultAsync(cp => cp.OcppChargerId == ocppChargerId);
+        
+        if (readModel == null)
+            return null;
+            
+        return await GetByIdAsync(readModel.Id);
     }
         
     public async Task AddAsync(ChargePoint chargePoint)
@@ -44,6 +56,7 @@ public class ChargePointRepository : IChargePointRepository
 
 public interface IChargePointRepository
 {
+    Task<ChargePoint?> GetByOcppChargerIdAsync(string ocppChargerId);
     Task<ChargePoint?> GetByIdAsync(Guid id);
     Task AddAsync(ChargePoint chargePoint);
     Task UpdateAsync(ChargePoint chargePoint);

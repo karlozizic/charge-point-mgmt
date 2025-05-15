@@ -2,6 +2,7 @@ using CPMS.API.Handlers.ChargeSession;
 using CPMS.API.Handlers.Connector;
 using CPMS.BuildingBlocks.Domain;
 using CPMS.BuildingBlocks.Infrastructure.Logger;
+using CPMS.Core.Models;
 using CPMS.Core.Models.Enums;
 using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Requests;
@@ -23,9 +24,10 @@ public class ProxyController : ControllerBase
         _logger = logger;
     }
 
+    [HttpPost]
     public async Task<ActionResult<AuthorizeChargerResponse>> Authorize(AuthorizeChargerRequest request)
     {
-        _logger.Info($"Authorization request received for chargePoint: {request.ChargerId}, tagId: {request.IdTag}");
+        _logger.Info($"Authorization request received for chargePoint: {request.OcppChargerId}, tagId: {request.IdTag}");
         
         try
         {
@@ -46,6 +48,7 @@ public class ProxyController : ControllerBase
         }
     }
     
+    [HttpPost]
     public async Task<ActionResult> StartTransaction(StartTransactionChargerResponse response)
     {
         _logger.Info($"Start transaction response from: {response.OcppChargerId}, TransactionId: {response.TransactionId}");
@@ -54,7 +57,7 @@ public class ProxyController : ControllerBase
         {
             var transactionId = await _mediator.Send(new StartTransactionCommand
             {
-                ChargerId = response.OcppChargerId,
+                OcppChargerId = response.OcppChargerId,
                 ConnectorId = response.OcppConnectorId,
                 TagId = response.IdTag,
                 MeterStart = response.MeterStart
@@ -81,6 +84,7 @@ public class ProxyController : ControllerBase
         }
     }
     
+    [HttpPost]
     public async Task<ActionResult<StopTransactionResponse>> StopTransaction(StopTransactionCpmsRequest request)
     {
         _logger.Info($"Stop transaction response TransactionId: {request.TranscationId}");
@@ -106,9 +110,10 @@ public class ProxyController : ControllerBase
         }
     }
     
+    [HttpPut]
     public async Task<ActionResult> BootNotification(BootNotificationRequest bootNotificationRequest)
     {
-        _logger.Info($"Boot notification received from: {bootNotificationRequest.ChargerId}, " + $"Model: {bootNotificationRequest.ChargePointModel}, Vendor: {bootNotificationRequest.ChargePointVendor}");
+        _logger.Info($"Boot notification received from: {bootNotificationRequest.OcppChargerId}, " + $"Model: {bootNotificationRequest.ChargePointModel}, Vendor: {bootNotificationRequest.ChargePointVendor}");
         
         try
         {
@@ -123,14 +128,15 @@ public class ProxyController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.Error($"Error processing boot notification for: {bootNotificationRequest.ChargerId} {ex.Message}");
+            _logger.Error($"Error processing boot notification for: {bootNotificationRequest.OcppChargerId} {ex.Message}");
             return StatusCode(500, "Internal server error during boot notification");
         }
     }
     
+    [HttpPut]
     public async Task<ActionResult> MeterValues(MeterValuesRequest meterValuesRequest)
     {
-        _logger.Info($"MeterValues request received from: {meterValuesRequest.ChargerId}, TransactionId: {meterValuesRequest.TransactionId}");
+        _logger.Info($"MeterValues request received from: {meterValuesRequest.OcppChargerId}, TransactionId: {meterValuesRequest.TransactionId}");
         
         try
         {
@@ -141,22 +147,22 @@ public class ProxyController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.Error($"Error processing meter values for: {meterValuesRequest.ChargerId}");
+            _logger.Error($"Error processing meter values for: {meterValuesRequest.OcppChargerId}");
             return StatusCode(500, "Internal server error");
         }
     }
     
-    
+    [HttpPut]
     public async Task<ActionResult> StatusNotification(StatusNotificationRequest request)
     {
-        _logger.Info($"Status notification from: {request.ChargerId}, " +
+        _logger.Info($"Status notification from: {((BaseMessage)request).OcppChargerId}, " +
                      $"Connector: {request.OcppConnectorId}, Status: {request.LastStatus}");
         
         try
         {
             await _mediator.Send(new UpdateConnectorStatusCommand
             {
-                ChargePointId = request.ChargerId,
+                OcppChargerId = request.OcppChargerId,
                 ConnectorId = request.OcppConnectorId,
                 Status = request.LastStatus,
                 Timestamp = request.LastStatusTime
@@ -166,7 +172,7 @@ public class ProxyController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.Error( $"Error processing status notification for: {request.ChargerId}");
+            _logger.Error( $"Error processing status notification for: {((BaseMessage)request).OcppChargerId}");
             return StatusCode(500, "Internal server error");
         }
     }

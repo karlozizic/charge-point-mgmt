@@ -17,7 +17,7 @@ public partial class ControllerOcpp16
         
         ClearChargingProfileResponse clearChargingProfileResponseProxy = new ClearChargingProfileResponse
             {
-                ChargerId = new Guid(ChargePointStatus.Id),
+                OcppChargerId = ChargePointStatus.Id,
                 Status = clearChargingProfileResponse.Status.ToString()
             };
 

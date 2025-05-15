@@ -191,7 +191,10 @@ public partial class OcppMiddleware
         {
             // Log incoming message
             _logger.Debug($"OCPPMiddleware => Received message: {message}");
-            
+            if (message == "ping")
+            {
+                return;
+            }
             // Parse message
             var match = MessageRegExp.Match(message);
             if (!match.Success)

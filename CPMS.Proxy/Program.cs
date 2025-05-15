@@ -14,7 +14,7 @@ builder.Services.AddHttpClient<ICpmsClient, CpmsClient>((serviceProvider, client
     var baseUrl = configuration["CpmsApi:BaseUrl"];
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-    client.Timeout = TimeSpan.FromSeconds(30);
+    client.Timeout = TimeSpan.FromSeconds(120);
 });
 
 #endregion

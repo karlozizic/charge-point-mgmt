@@ -40,10 +40,10 @@ public class ChargePointsController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id }, id);
     }
         
-    [HttpPost("{id}/connectors")]
-    public async Task<ActionResult> AddConnector(Guid id, AddConnectorCommand command)
+    [HttpPost("{ocppChargerId}/connectors")]
+    public async Task<ActionResult> AddConnector(string ocppChargerId, AddConnectorCommand command)
     {
-        command.ChargePointId = id;
+        command.OcppChargerId = ocppChargerId;
         await _mediator.Send(command);
         return NoContent();
     }

@@ -3,7 +3,7 @@ namespace CPMS.API.Dtos;
 public class ChargePointDto
 {
     public Guid Id { get; set; }
-    public string Name { get; set; }
+    public string OcppChargerId { get; set; }
     public Guid LocationId { get; set; }
     public double? MaxPower { get; set; }
     public double? CurrentPower { get; set; }
