@@ -1,0 +1,10 @@
+.charge-tags-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}

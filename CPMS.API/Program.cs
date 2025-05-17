@@ -47,6 +47,12 @@ app.UseSwaggerUI(c => {
 app.UseRouting();
 app.UseHttpsRedirection();
 app.UseAuthorization();
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapControllers();
+
+app.MapFallbackToFile("index.html");
 
 await app.RunAsync();

@@ -1,0 +1,97 @@
+/* src/features/chargePoints/ChargePointDetail.css */
+.cp-detail {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.back {
+    margin-bottom: 15px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+@media (max-width: 600px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.info-item {
+    margin-bottom: 8px;
+}
+
+.connectors-section {
+    margin-top: 25px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.section-header h2 {
+    margin: 0;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.available {
+    background: #f6ffed;
+    color: #52c41a;
+    border: 1px solid #b7eb8f;
+}
+
+.charging {
+    background: #e6f7ff;
+    color: #1890ff;
+    border: 1px solid #91d5ff;
+}
+
+.preparing {
+    background: #fff7e6;
+    color: #fa8c16;
+    border: 1px solid #ffd591;
+}
+
+.reserved {
+    background: #f9f0ff;
+    color: #722ed1;
+    border: 1px solid #d3adf7;
+}
+
+.unavailable {
+    background: #fff2e8;
+    color: #fa541c;
+    border: 1px solid #ffbb96;
+}
+
+.faulted {
+    background: #fff1f0;
+    color: #f5222d;
+    border: 1px solid #ffa39e;
+}
+
+.suspendedev, .suspendedevse {
+    background: #f5f5f5;
+    color: #595959;
+    border: 1px solid #d9d9d9;
+}
+
+.finishing {
+    background: #fcfcfc;
+    color: #13c2c2;
+    border: 1px solid #87e8de;
+}
