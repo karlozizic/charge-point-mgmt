@@ -71,8 +71,7 @@ public class StopTransactionCommandHandler : IRequestHandler<StopTransactionComm
             
             if (chargePoint != null)
             {
-                var connector = chargePoint.Connectors.FirstOrDefault(c => 
-                    int.Parse(c.Id.ToString().Substring(0, 8), System.Globalization.NumberStyles.HexNumber) == chargeSession.ConnectorId);
+                var connector = chargePoint.Connectors.FirstOrDefault(c => c.Id == chargeSession.ConnectorId);
                     
                 if (connector != null)
                 {

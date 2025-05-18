@@ -8,6 +8,6 @@ public class StartTransactionChargerResponse
     public string? IdTag { get; set; }
     public double MeterStart { get; set; }
     public DateTimeOffset? TimeStart { get; set; }
-    public string TransactionId { get; set; }
+    public string? TransactionId { get; set; }
     public int? RemoteStartId { get; set; }
 }

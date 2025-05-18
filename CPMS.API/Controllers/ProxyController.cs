@@ -51,7 +51,7 @@ public class ProxyController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> StartTransaction(StartTransactionChargerResponse request)
     {
-        _logger.Info($"Start transaction response from: {request.OcppChargerId}, TransactionId: {request.TransactionId}");
+        _logger.Info($"Start transaction response from: {request.OcppChargerId}");
         
         try
         {
