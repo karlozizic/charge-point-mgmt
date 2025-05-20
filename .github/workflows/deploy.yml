@@ -1,0 +1,44 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: cpmsregistry.azurecr.io
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Registry
+        run: az acr login --name cpmsregistry
+
+      - name: Build and push API
+        run: |
+          docker build -f CPMS.API/Dockerfile -t ${{ env.REGISTRY }}/cpms-api:latest .
+          docker push ${{ env.REGISTRY }}/cpms-api:latest
+
+      - name: Build and push Proxy
+        run: |
+          docker build -f CPMS.Proxy/Dockerfile -t ${{ env.REGISTRY }}/cpms-proxy:latest .
+          docker push ${{ env.REGISTRY }}/cpms-proxy:latest
+
+      - name: Build and push Frontend
+        run: |
+          docker build -f CPMS.Frontend/Dockerfile -t ${{ env.REGISTRY }}/cpms-frontend:latest .
+          docker push ${{ env.REGISTRY }}/cpms-frontend:latest
+
+      - name: Deploy to Container Apps
+        run: |
+          az containerapp update --name cpms-api --resource-group rg-cpms --image ${{ env.REGISTRY }}/cpms-api:latest
+          az containerapp update --name cpms-proxy --resource-group rg-cpms --image ${{ env.REGISTRY }}/cpms-proxy:latest
+          az containerapp update --name cpms-frontend --resource-group rg-cpms --image ${{ env.REGISTRY }}/cpms-frontend:latest

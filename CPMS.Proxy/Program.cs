@@ -37,13 +37,15 @@ builder.Services.AddWebSockets(options =>
 
 builder.Services.AddControllers();
 
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Proxy is running"));
+
 var app = builder.Build();
 
 app.UseWebSockets();
 
 app.UseCors("AllowAll");
 
-//todo: middleware reference?
 app.UseOCPPMiddleware();
 
 app.UseRouting();

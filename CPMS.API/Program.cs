@@ -1,5 +1,3 @@
-using CPMS.API.Handlers;
-using CPMS.API.Handlers.ChargePoint;
 using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.BuildingBlocks.Infrastructure.Logger;
@@ -33,6 +31,9 @@ builder.Services.AddSingleton<ILoggerService, LoggerService>();
 builder.Services.AddScoped<IChargePointRepository, ChargePointRepository>();
 builder.Services.AddScoped<IChargeSessionRepository, ChargeSessionRepository>();
 
+builder.Services.AddHealthChecks()
+    .AddNpgSql(builder.Configuration.GetConnectionString("MartenDb") ?? string.Empty);
+
 var app = builder.Build();
 
 //if (app.Environment.IsDevelopment())
@@ -52,7 +53,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.MapControllers();
-
+app.MapHealthChecks("/health");
 app.MapFallbackToFile("index.html");
 
 await app.RunAsync();
