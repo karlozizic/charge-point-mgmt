@@ -1,7 +1,6 @@
-using CPMS.API.Handlers;
-using CPMS.API.Handlers.ChargePoint;
 using CPMS.API.Projections;
 using CPMS.API.Repositories;
+using CPMS.BuildingBlocks.Infrastructure.Logger;
 using Marten;
 using Marten.Events.Daemon.Resiliency;
 using Marten.Events.Projections;
@@ -13,19 +12,27 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddMediatR(cfg => {
-    cfg.RegisterServicesFromAssembly(typeof(CreateChargePointCommandHandler).Assembly);
+    cfg.RegisterServicesFromAssemblyContaining<Program>();
 });
 
 builder.Services.AddMarten(options => {
         options.Connection(builder.Configuration.GetConnectionString("MartenDb") ?? string.Empty);
         
         options.UseNewtonsoftForSerialization();
+        
         options.Projections.Add<ChargePointProjection>(ProjectionLifecycle.Inline);
+        options.Projections.Add<ChargeSessionProjection>(ProjectionLifecycle.Inline);
+        options.Projections.Add<ChargeTagProjection>(ProjectionLifecycle.Inline);
     })
     .UseLightweightSessions()
     .AddAsyncDaemon(DaemonMode.Solo);
 
+builder.Services.AddSingleton<ILoggerService, LoggerService>();
 builder.Services.AddScoped<IChargePointRepository, ChargePointRepository>();
+builder.Services.AddScoped<IChargeSessionRepository, ChargeSessionRepository>();
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(builder.Configuration.GetConnectionString("MartenDb") ?? string.Empty);
 
 var app = builder.Build();
 
@@ -41,6 +48,12 @@ app.UseSwaggerUI(c => {
 app.UseRouting();
 app.UseHttpsRedirection();
 app.UseAuthorization();
-app.MapControllers();
 
-app.Run();
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.MapControllers();
+app.MapHealthChecks("/health");
+app.MapFallbackToFile("index.html");
+
+await app.RunAsync();

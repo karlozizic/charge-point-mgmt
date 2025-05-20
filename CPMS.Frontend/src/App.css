@@ -1,0 +1,259 @@
+/* src/App.css */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  color: #333;
+  background: #f7f7f7;
+  line-height: 1.5;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+h1, h2, h3, h4 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.cp-list,
+.cp-detail,
+.home,
+.charge-tags-container,
+.charge-tag-detail {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+table th, table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+table th {
+  background-color: #f5f5f5;
+  font-weight: 500;
+}
+
+.btn {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.btn:hover {
+  background: #40a9ff;
+}
+
+.btn-gray {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #d9d9d9;
+}
+
+.btn-gray:hover {
+  background: #e6e6e6;
+}
+
+.btn-red {
+  background: #ff4d4f;
+}
+
+.btn-red:hover {
+  background: #ff7875;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #40a9ff;
+  outline: 0;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.card {
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+}
+
+.card-header {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.card-body {
+  padding: 15px;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal {
+  background: white;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  padding: 12px 15px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #999;
+}
+
+.close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 15px;
+}
+
+.form-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.error-msg {
+  padding: 8px;
+  background: #fff1f0;
+  border: 1px solid #ffccc7;
+  border-radius: 4px;
+  color: #f5222d;
+  margin-bottom: 12px;
+}
+
+.empty {
+  padding: 25px 15px;
+  text-align: center;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin: 15px 0;
+  color: #666;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+.ant-card,
+.ant-table-wrapper,
+.ant-descriptions,
+.ant-modal {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.btn-secondary {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #d9d9d9;
+}
+
+.btn-secondary:hover {
+  background: #e6e6e6;
+}
+
+.error-message {
+  padding: 8px;
+  background: #fff1f0;
+  border: 1px solid #ffccc7;
+  border-radius: 4px;
+  color: #f5222d;
+  margin-bottom: 12px;
+}
+
+.empty-state {
+  padding: 25px 15px;
+  text-align: center;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin: 15px 0;
+}

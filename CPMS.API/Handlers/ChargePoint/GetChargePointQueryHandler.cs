@@ -31,7 +31,7 @@ public class GetChargePointQueryHandler : IRequestHandler<GetChargePointQuery, C
         return new ChargePointDto
         {
             Id = readModel.Id,
-            Name = readModel.Name,
+            OcppChargerId = readModel.OcppChargerId,
             LocationId = readModel.LocationId,
             MaxPower = readModel.MaxPower,
             CurrentPower = readModel.CurrentPower,

@@ -5,13 +5,13 @@ namespace CPMS.API.Events.ChargePoint;
 public class ConnectorStatusChangedEvent : DomainEventBase
 {
     public Guid ChargePointId { get; }
-    public Guid ConnectorId { get; }
+    public int ConnectorId { get; }
     public string Status { get; }
     public DateTime Timestamp { get; }
         
     public ConnectorStatusChangedEvent(
         Guid chargePointId, 
-        Guid connectorId, 
+        int connectorId, 
         string status, 
         DateTime timestamp)
     {

@@ -4,9 +4,9 @@ namespace CPMS.API.BusinessRules;
 
 public class ConnectorMustExistRule : IBusinessRule
 {
-    private readonly Guid _connectorId;
+    private readonly int _connectorId;
         
-    public ConnectorMustExistRule(Guid connectorId)
+    public ConnectorMustExistRule(int connectorId)
     {
         _connectorId = connectorId;
     }

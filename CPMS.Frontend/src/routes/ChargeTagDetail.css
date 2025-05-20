@@ -1,0 +1,15 @@
+.charge-tag-detail {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.back {
+    margin-bottom: 15px;
+}
+
+.helper-text {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #888;
+}

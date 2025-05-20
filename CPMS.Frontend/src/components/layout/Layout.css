@@ -1,0 +1,20 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.content {
+    flex: 1;
+    padding: 15px;
+    background: #fff;
+}
+
+.footer {
+    padding: 12px 15px;
+    background: #f0f0f0;
+    border-top: 1px solid #ddd;
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+}

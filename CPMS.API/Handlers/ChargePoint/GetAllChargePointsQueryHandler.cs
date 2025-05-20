@@ -27,7 +27,7 @@ public class GetAllChargePointsQueryHandler : IRequestHandler<GetAllChargePoints
         return readModels.Select(rm => new ChargePointSummaryDto
         {
             Id = rm.Id,
-            Name = rm.Name,
+            OcppChargerId = rm.OcppChargerId,
             LocationId = rm.LocationId,
             TotalConnectors = rm.Connectors?.Count ?? 0,
             MaxPower = rm.MaxPower,
