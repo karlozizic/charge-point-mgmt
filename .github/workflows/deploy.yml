@@ -6,6 +6,7 @@ on:
 
 env:
   REGISTRY: cpmsregistry.azurecr.io
+  RESOURCE_GROUP: rg-cpms
 
 jobs:
   deploy:
@@ -31,14 +32,27 @@ jobs:
         run: |
           docker build -f CPMS.Proxy/Dockerfile -t ${{ env.REGISTRY }}/cpms-proxy:latest .
           docker push ${{ env.REGISTRY }}/cpms-proxy:latest
-
+          
       - name: Build and push Frontend
         run: |
           docker build -f CPMS.Frontend/Dockerfile -t ${{ env.REGISTRY }}/cpms-frontend:latest .
           docker push ${{ env.REGISTRY }}/cpms-frontend:latest
 
-      - name: Deploy to Container Apps
+      - name: Deploy API with environment variables
         run: |
-          az containerapp update --name cpms-api --resource-group rg-cpms --image ${{ env.REGISTRY }}/cpms-api:latest
-          az containerapp update --name cpms-proxy --resource-group rg-cpms --image ${{ env.REGISTRY }}/cpms-proxy:latest
-          az containerapp update --name cpms-frontend --resource-group rg-cpms --image ${{ env.REGISTRY }}/cpms-frontend:latest
+          az containerapp update --name cpms-api --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-api:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "ConnectionStrings__MartenDb=${{ secrets.DATABASE_CONNECTION_STRING }}" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug"
+
+      - name: Deploy Proxy with environment variables
+        run: |
+          az containerapp update --name cpms-proxy --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-proxy:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug"
+
+      - name: Deploy Frontend
+        run: |
+          az containerapp update --name cpms-frontend --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-frontend:latest
+
+      - name: Display service URLs
+        run: |
+          echo "Deployment complete!"
+          echo "API URL: https://$(az containerapp show --name cpms-api --resource-group ${{ env.RESOURCE_GROUP }} --query 'properties.configuration.ingress.fqdn' -o tsv)"
+          echo "Proxy URL: https://$(az containerapp show --name cpms-proxy --resource-group ${{ env.RESOURCE_GROUP }} --query 'properties.configuration.ingress.fqdn' -o tsv)"
+          echo "Frontend URL: https://$(az containerapp show --name cpms-frontend --resource-group ${{ env.RESOURCE_GROUP }} --query 'properties.configuration.ingress.fqdn' -o tsv)"
