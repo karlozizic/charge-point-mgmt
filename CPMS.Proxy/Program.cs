@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.WebSockets;
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 #region Services
 
 builder.Services.AddSingleton<ILoggerService, LoggerService>();
