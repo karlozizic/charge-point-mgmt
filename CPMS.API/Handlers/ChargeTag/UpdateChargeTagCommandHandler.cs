@@ -1,3 +1,4 @@
+using CPMS.API.Exceptions;
 using Marten;
 using MediatR;
 
@@ -6,45 +7,32 @@ namespace CPMS.API.Handlers.ChargeTag;
 public class UpdateChargeTagCommand : IRequest
 {
     public Guid Id { get; set; }
-    public DateTime? ExpiryDate { get; set; }
-    public bool? Blocked { get; set; }
+    public string TagId { get; set; }
 }
 
 public class UpdateChargeTagCommandHandler : IRequestHandler<UpdateChargeTagCommand>
 {
     private readonly IDocumentSession _documentSession;
-    private readonly IMediator _mediator;
 
-    public UpdateChargeTagCommandHandler(IDocumentSession documentSession, IMediator mediator)
+    public UpdateChargeTagCommandHandler(IDocumentSession documentSession)
     {
         _documentSession = documentSession;
-        _mediator = mediator;
     }
 
     public async Task Handle(UpdateChargeTagCommand request, CancellationToken cancellationToken)
     {
         var chargeTag = await _documentSession.Events.AggregateStreamAsync<Entities.ChargeTag>(request.Id, token: cancellationToken);
-
+        
         if (chargeTag == null)
+            throw new NotFoundException($"ChargeTag with ID {request.Id} not found.");
+
+        chargeTag.UpdateTagId(request.TagId);
+
+        foreach (var @event in chargeTag.DomainEvents)
         {
-            throw new InvalidOperationException($"Tag s ID {request.Id} ne postoji.");
+            _documentSession.Events.Append(request.Id, @event);
         }
 
-        if (request.ExpiryDate.HasValue)
-        {
-            await _mediator.Send(new UpdateChargeTagExpiryCommand { Id = request.Id, ExpiryDate = request.ExpiryDate });
-        }
-
-        if (request.Blocked.HasValue)
-        {
-            if (request.Blocked.Value && !chargeTag.Blocked)
-            {
-                await _mediator.Send(new BlockChargeTagCommand { Id = request.Id });
-            }
-            else if (!request.Blocked.Value && chargeTag.Blocked)
-            {
-                await _mediator.Send(new UnblockChargeTagCommand { Id = request.Id });
-            }
-        }
+        await _documentSession.SaveChangesAsync(cancellationToken);
     }
 }

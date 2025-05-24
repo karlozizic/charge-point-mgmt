@@ -77,8 +77,22 @@ public class ChargeTag : Entity, IAggregateRoot
         Apply(@event);
     }
     
+    
     private void Apply(ChargeTagExpiryUpdatedEvent @event)
     {
         ExpiryDate = @event.ExpiryDate;
+    }
+    
+    public void UpdateTagId(string tagId)
+    {
+        var @event = new ChargeTagIdUpdatedEvent(Id, tagId);
+        
+        AddDomainEvent(@event);
+        Apply(@event);
+    }
+    
+    private void Apply(ChargeTagIdUpdatedEvent @event)
+    {
+        TagId = @event.TagId;
     }
 }
