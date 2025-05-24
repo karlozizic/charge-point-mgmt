@@ -1,10 +1,11 @@
-namespace CPMS.API.Projections;
+namespace CPMS.API.Dtos;
 
-public class ChargeSessionReadModel
+public class ChargeSessionDto
 {
     public Guid Id { get; set; }
     public int TransactionId { get; set; }
     public string ChargePointId { get; set; }
+    public string ChargePointName { get; set; }
     public int ConnectorId { get; set; }
     public string TagId { get; set; }
     public string TagName { get; set; }
@@ -14,13 +15,7 @@ public class ChargeSessionReadModel
     public double? StopMeterValue { get; set; }
     public double? EnergyDeliveredKWh { get; set; }
     public string Status { get; set; }
-    public string StopReason { get; set; }
-    public List<MeterValueReadModel> MeterValues { get; set; } = new();
-}
-
-public enum SessionStatus
-{
-    Started,
-    Stopped,
-    Error
+    public string? StopReason { get; set; }
+    public TimeSpan? Duration => StopTime.HasValue ? StopTime.Value - StartTime : null;
+    public List<MeterValueDto> MeterValues { get; set; } = new List<MeterValueDto>();
 }

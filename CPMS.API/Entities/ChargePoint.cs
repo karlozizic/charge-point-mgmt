@@ -1,5 +1,4 @@
 using CPMS.API.BusinessRules;
-using CPMS.API.DomainRules;
 using CPMS.API.Events.ChargePoint;
 using CPMS.API.Events.Connector;
 using CPMS.BuildingBlocks.Domain;

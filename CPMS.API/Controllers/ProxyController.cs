@@ -1,9 +1,9 @@
+using CPMS.API.Handlers.ChargePoint;
 using CPMS.API.Handlers.ChargeSession;
 using CPMS.API.Handlers.Connector;
 using CPMS.BuildingBlocks.Domain;
 using CPMS.BuildingBlocks.Infrastructure.Logger;
 using CPMS.Core.Models;
-using CPMS.Core.Models.Enums;
 using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Requests;
 using CPMS.Core.Models.Responses;

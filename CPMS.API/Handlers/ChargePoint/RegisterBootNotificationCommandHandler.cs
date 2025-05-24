@@ -2,7 +2,7 @@ using CPMS.API.Repositories;
 using CPMS.Core.Models.Requests;
 using MediatR;
 
-namespace CPMS.API.Handlers.ChargeSession;
+namespace CPMS.API.Handlers.ChargePoint;
 
 public class BootNotificationCommand : IRequest<bool>
 {
@@ -48,9 +48,7 @@ public class RegisterBootNotificationCommandHandler : IRequestHandler<BootNotifi
         var chargePoint = await _chargePointRepository.GetByOcppChargerIdAsync(request.OcppChargerId);
             
         if (chargePoint == null)
-        {
             return false;
-        }
             
         chargePoint.RegisterBoot(
             request.ChargePointSerialNumber,
