@@ -73,3 +73,50 @@ public class TagNotValidRule : IBusinessRule
 
     public string Message => $"Tag {_name} is not valid";
 }
+
+
+public class LocationMustHaveValidAddressRule : IBusinessRule
+{
+    private readonly string _address;
+    private readonly string _city;
+    private readonly string _country;
+
+    public LocationMustHaveValidAddressRule(string address, string city, string country)
+    {
+        _address = address;
+        _city = city;
+        _country = country;
+    }
+
+    public bool IsBroken() => 
+        string.IsNullOrWhiteSpace(_address) || 
+        string.IsNullOrWhiteSpace(_city) || 
+        string.IsNullOrWhiteSpace(_country);
+
+    public string Message => "Location must have valid address, city, and country.";
+}
+
+public class LocationCoordinatesMustBeValidRule : IBusinessRule
+{
+    private readonly double? _latitude;
+    private readonly double? _longitude;
+
+    public LocationCoordinatesMustBeValidRule(double? latitude, double? longitude)
+    {
+        _latitude = latitude;
+        _longitude = longitude;
+    }
+
+    public bool IsBroken()
+    {
+        if (_latitude.HasValue && (_latitude < -90 || _latitude > 90))
+            return true;
+        
+        if (_longitude.HasValue && (_longitude < -180 || _longitude > 180))
+            return true;
+
+        return false;
+    }
+
+    public string Message => "Location coordinates must be valid (latitude: -90 to 90, longitude: -180 to 180).";
+}

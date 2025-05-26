@@ -19,8 +19,8 @@ public class ChargeSessionsController : ControllerBase
     
     [HttpGet]
     public async Task<ActionResult<List<ChargeSessionReadModel>>> GetAll(
-        [FromQuery] int? pageNumber = null,
-        [FromQuery] int? pageSize = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
         [FromQuery] SessionStatus? status = null,
         [FromQuery] string? tagId = null,
         [FromQuery] DateTime? startDate = null,
