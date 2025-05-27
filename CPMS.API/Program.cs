@@ -19,6 +19,16 @@ builder.Services.AddMediatR(cfg => {
     cfg.RegisterServicesFromAssemblyContaining<Program>();
 });
 
+builder.Services.AddSingleton<ILoggerService, LoggerService>();
+builder.Services.AddScoped<IChargePointRepository, ChargePointRepository>();
+builder.Services.AddScoped<IChargeSessionRepository, ChargeSessionRepository>();
+
+await using (var tempServiceProvider = builder.Services.BuildServiceProvider())
+{
+    var logger = tempServiceProvider.GetRequiredService<ILoggerService>();
+    logger.Info($"{builder.Configuration.GetConnectionString("MartenDb")}");
+}
+
 builder.Services.AddMarten(options => {
         options.Connection(builder.Configuration.GetConnectionString("MartenDb") ?? string.Empty);
         
@@ -30,10 +40,6 @@ builder.Services.AddMarten(options => {
     })
     .UseLightweightSessions()
     .AddAsyncDaemon(DaemonMode.Solo);
-
-builder.Services.AddSingleton<ILoggerService, LoggerService>();
-builder.Services.AddScoped<IChargePointRepository, ChargePointRepository>();
-builder.Services.AddScoped<IChargeSessionRepository, ChargeSessionRepository>();
 
 builder.Services.AddHealthChecks()
     .AddNpgSql(builder.Configuration.GetConnectionString("MartenDb") ?? string.Empty);
