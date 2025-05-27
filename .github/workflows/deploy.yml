@@ -40,7 +40,7 @@ jobs:
 
       - name: Deploy API with environment variables
         run: |
-          az containerapp update --name cpms-api --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-api:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "ConnectionStrings:MartenDb=${{ secrets.DATABASE_CONNECTION_STRING }}" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug"
+          az containerapp update --name cpms-api --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-api:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "ConnectionStrings__MartenDb=${{ secrets.DATABASE_CONNECTION_STRING }}" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug"
 
       - name: Deploy Proxy with environment variables
         run: |
