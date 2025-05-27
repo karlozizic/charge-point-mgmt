@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-    baseURL: '/api',
+    baseURL: 'https://cpms-api.jollysky-76e311d7.northeurope.azurecontainerapps.io/api',
     headers: {
         'Content-Type': 'application/json',
     },
