@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chargeTagsApi } from '../api/services/chargeTags';
-import type {CreateChargeTagCommand} from '../types/chargeTag';
+import { chargeTagsApi } from '../../api/services/chargeTags.ts';
+import type {CreateChargeTagCommand} from '../../types/chargeTag.ts';
 
 function ChargeTagList() {
     const [showModal, setShowModal] = useState(false);

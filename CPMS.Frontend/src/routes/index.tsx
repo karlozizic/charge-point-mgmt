@@ -1,9 +1,9 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import ChargeTagList from "./ChargeTagList.tsx";
-import ChargeTagDetail from "./ChargeTagDetail.tsx";
+import ChargeTagList from "./ChargeTag/ChargeTagList.tsx";
+import ChargeTagDetail from "./ChargeTag/ChargeTagDetail.tsx";
 import Layout from '../components/layout/Layout';
-import ChargePointDetail from "./ChargePointDetail.tsx";
-import ChargePointList from "./ChargePointList.tsx";
+import ChargePointDetail from "./ChargePoint/ChargePointDetail.tsx";
+import ChargePointList from "./ChargePoint/ChargePointList.tsx";
 import Home from "./Home.tsx";
 
 const router = createBrowserRouter([

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chargeTagsApi } from '../api/services/chargeTags';
-import type { UpdateChargeTagCommand, UpdateChargeTagExpiryCommand } from '../types/chargeTag';
+import { chargeTagsApi } from '../../api/services/chargeTags.ts';
+import type { UpdateChargeTagCommand, UpdateChargeTagExpiryCommand } from '../../types/chargeTag.ts';
 
 function ChargeTagDetail() {
     const { id } = useParams<{ id: string }>();

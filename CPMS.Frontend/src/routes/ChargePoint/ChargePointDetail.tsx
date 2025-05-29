@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chargePointsApi } from '../api/services/chargePoints';
+import { chargePointsApi } from '../../api/services/chargePoints.ts';
 import './ChargePointDetail.css';
 
 const ChargePointDetail = () => {

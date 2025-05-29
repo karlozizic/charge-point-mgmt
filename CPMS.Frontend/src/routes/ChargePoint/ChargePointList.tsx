@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {chargePointsApi} from "../api/services/chargePoints.ts";
+import {chargePointsApi} from "../../api/services/chargePoints.ts";
 import './ChargePointList.css';
 
 const ChargePointList = () => {
