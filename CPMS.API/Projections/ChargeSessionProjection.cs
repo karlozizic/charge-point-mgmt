@@ -16,7 +16,7 @@ public class ChargeSessionProjection : SingleStreamProjection<ChargeSessionReadM
             model.TagId = @event.TagId;
             model.StartTime = @event.StartTime;
             model.StartMeterValue = @event.StartMeterValue;
-            model.Status = "Started";
+            model.Status = nameof(SessionStatus.Started);
             model.EnergyDeliveredKWh = 0;
             return model;
         });
@@ -45,7 +45,7 @@ public class ChargeSessionProjection : SingleStreamProjection<ChargeSessionReadM
             model.StopTime = @event.StopTime;
             model.StopMeterValue = @event.StopMeterValue;
             model.StopReason = @event.StopReason;
-            model.Status = "Stopped";
+            model.Status = nameof(SessionStatus.Stopped);
             
             model.EnergyDeliveredKWh = (@event.StopMeterValue - model.StartMeterValue) / 1000.0;
             

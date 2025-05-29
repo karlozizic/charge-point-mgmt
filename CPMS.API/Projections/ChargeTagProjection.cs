@@ -25,5 +25,9 @@ public class ChargeTagProjection : SingleStreamProjection<ChargeTagReadModel>
         ProjectEvent<ChargeTagExpiryUpdatedEvent>((model, @event) => {
             model.ExpiryDate = @event.ExpiryDate;
         });
+        
+        ProjectEvent<ChargeTagIdUpdatedEvent>((model, @event) => {
+            model.TagId = @event.TagId;
+        });
     }
 }

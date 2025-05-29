@@ -23,12 +23,6 @@ builder.Services.AddSingleton<ILoggerService, LoggerService>();
 builder.Services.AddScoped<IChargePointRepository, ChargePointRepository>();
 builder.Services.AddScoped<IChargeSessionRepository, ChargeSessionRepository>();
 
-await using (var tempServiceProvider = builder.Services.BuildServiceProvider())
-{
-    var logger = tempServiceProvider.GetRequiredService<ILoggerService>();
-    logger.Info($"{builder.Configuration.GetConnectionString("MartenDb")}");
-}
-
 builder.Services.AddMarten(options => {
         options.Connection(builder.Configuration.GetConnectionString("MartenDb") ?? string.Empty);
         
@@ -37,9 +31,22 @@ builder.Services.AddMarten(options => {
         options.Projections.Add<ChargePointProjection>(ProjectionLifecycle.Inline);
         options.Projections.Add<ChargeSessionProjection>(ProjectionLifecycle.Inline);
         options.Projections.Add<ChargeTagProjection>(ProjectionLifecycle.Inline);
+        options.Projections.Add<LocationProjection>(ProjectionLifecycle.Inline);
+        
+        options.Schema.For<LocationReadModel>().Identity(x => x.Id);
+        options.Schema.For<ChargePointReadModel>().Identity(x => x.Id);
+        options.Schema.For<ChargeSessionReadModel>().Identity(x => x.Id);
+        options.Schema.For<ChargeTagReadModel>().Identity(x => x.Id);
+        options.Schema.For<ConnectorReadModel>().Identity(x => x.ConnectorId);
+        options.Schema.For<ConnectorErrorReadModel>().Identity(x => new { x.ConnectorId, x.Timestamp });
     })
     .UseLightweightSessions()
     .AddAsyncDaemon(DaemonMode.Solo);
+
+builder.Services.AddSingleton<ILoggerService, LoggerService>();
+builder.Services.AddScoped<IChargePointRepository, ChargePointRepository>();
+builder.Services.AddScoped<IChargeSessionRepository, ChargeSessionRepository>();
+builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 
 builder.Services.AddHealthChecks()
     .AddNpgSql(builder.Configuration.GetConnectionString("MartenDb") ?? string.Empty);
