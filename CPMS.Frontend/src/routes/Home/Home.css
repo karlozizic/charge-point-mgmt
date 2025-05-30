@@ -1,0 +1,153 @@
+.home {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.stat-box {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-box h3 {
+    margin: 0 0 10px 0;
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: bold;
+    color: #1890ff;
+    margin-bottom: 8px;
+}
+
+.stat-info {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 12px;
+}
+
+.box-link {
+    color: #1890ff;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.box-link:hover {
+    text-decoration: underline;
+}
+
+.active-sessions {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin: 30px 0;
+}
+
+.active-sessions h2 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+}
+
+.session-list {
+    display: grid;
+    gap: 10px;
+}
+
+.session-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #52c41a;
+}
+
+.session-info {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.session-info span {
+    color: #666;
+    font-size: 14px;
+}
+
+.view-all {
+    display: inline-block;
+    margin-top: 15px;
+    color: #1890ff;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.view-all:hover {
+    text-decoration: underline;
+}
+
+.actions {
+    margin-top: 40px;
+}
+
+.actions h2 {
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+@media (max-width: 768px) {
+    .home {
+        padding: 15px;
+    }
+
+    .stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .session-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .session-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats {
+        grid-template-columns: 1fr;
+    }
+}

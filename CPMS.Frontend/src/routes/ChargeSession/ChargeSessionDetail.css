@@ -1,0 +1,65 @@
+.meter-values {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.meter-values h3 {
+    margin: 0 0 15px 0;
+}
+
+.meter-table {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
+}
+
+.meter-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.meter-table th {
+    background: #fafafa;
+    padding: 10px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    font-weight: 600;
+    border-bottom: 1px solid #ddd;
+}
+
+.meter-table td {
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.meter-table tr:hover {
+    background: #fafafa;
+}
+
+@media (max-width: 768px) {
+    .session-detail {
+        padding: 15px;
+    }
+
+    .session-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .session-info {
+        grid-template-columns: 1fr;
+    }
+
+    .meter-table {
+        overflow-x: auto;
+    }
+
+    .meter-table table {
+        min-width: 500px;
+    }
+}

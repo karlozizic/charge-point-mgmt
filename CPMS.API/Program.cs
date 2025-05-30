@@ -38,7 +38,7 @@ builder.Services.AddMarten(options => {
         options.Schema.For<ChargeSessionReadModel>().Identity(x => x.Id);
         options.Schema.For<ChargeTagReadModel>().Identity(x => x.Id);
         options.Schema.For<ConnectorReadModel>().Identity(x => x.ConnectorId);
-        options.Schema.For<ConnectorErrorReadModel>().Identity(x => new { x.ConnectorId, x.Timestamp });
+        options.Schema.For<ConnectorErrorReadModel>().Identity(x => new { x.Id});
     })
     .UseLightweightSessions()
     .AddAsyncDaemon(DaemonMode.Solo);
