@@ -105,15 +105,6 @@ function Home() {
                     )}
                 </div>
             )}
-
-            <div className="actions">
-                <h2>Quick Actions</h2>
-                <div className="action-buttons">
-                    <Link to="/charge-points" className="btn">Manage ChargePoints</Link>
-                    <Link to="/charge-tags" className="btn">Manage Tags</Link>
-                    <Link to="/charge-sessions" className="btn">View Sessions</Link>
-                </div>
-            </div>
         </div>
     );
 }
