@@ -11,9 +11,9 @@ function Header() {
                 <ul>
                     <li><Link to="/">Home</Link></li>
                     <li><Link to="/locations">Locations</Link></li>
-                    <li><Link to="/charge-points">Charge Points</Link></li>
-                    <li><Link to="/charge-tags">Charge Tags</Link></li>
-                    <li><Link to="/charge-sessions">Charge Sessions</Link></li>
+                    <li><Link to="/charge-points">ChargePoints</Link></li>
+                    <li><Link to="/charge-tags">Tags</Link></li>
+                    <li><Link to="/charge-sessions">Sessions</Link></li>
                 </ul>
             </nav>
         </header>

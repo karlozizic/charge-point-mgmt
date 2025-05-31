@@ -95,7 +95,7 @@ function ChargeLocationMap({ locations }: ChargeLocationMapProps) {
                         <strong>${location.name}</strong><br>
                         ${location.address}<br>
                         ${location.city}, ${location.country}<br>
-                        <small>${location.totalChargePoints} charge points</small>
+                        <small>${location.totalChargePoints} ChargePoints</small>
                     `);
 
                     markers.push(marker);

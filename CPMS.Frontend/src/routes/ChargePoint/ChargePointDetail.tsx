@@ -125,8 +125,8 @@ const ChargePointDetail = () => {
     setShowUpdateStatusModal(true);
   };
 
-  if (isLoading) return <div className="loading">Loading charge point details...</div>;
-  if (!chargePoint) return <div className="empty">Charge point not found</div>;
+  if (isLoading) return <div className="loading">Loading ChargePoint details...</div>;
+  if (!chargePoint) return <div className="empty">ChargePoint not found</div>;
 
   return (
       <div className="cp-detail">
@@ -134,7 +134,7 @@ const ChargePointDetail = () => {
           Back to List
         </button>
 
-        <h1>Charge Point Details</h1>
+        <h1>ChargePoint Details</h1>
 
         <div className="card">
           <div className="card-header">

@@ -37,30 +37,30 @@ function Home() {
 
     return (
         <div className="home">
-            <h1>Charge Point Management System</h1>
+            <h1>ChargePoint Management System</h1>
 
             <div className="stats">
                 <div className="stat-box">
                     <h3>Locations</h3>
                     <div className="stat-number">{locations.length}</div>
-                    <div className="stat-info">{points.length} charge points</div>
+                    <div className="stat-info">{points.length} ChargePoints</div>
                     <Link to="/locations" className="box-link">Manage locations</Link>
                 </div>
             </div>
 
             <div className="stats">
                 <div className="stat-box">
-                    <h3>Charge Points</h3>
+                    <h3>ChargePoints</h3>
                     <div className="stat-number">{points.length}</div>
                     <div className="stat-info">{activePoints} with connectors</div>
-                    <Link to="/charge-points" className="box-link">Manage charge points</Link>
+                    <Link to="/charge-points" className="box-link">Manage ChargePoints</Link>
                 </div>
 
                 <div className="stat-box">
-                    <h3>Charge Tags</h3>
+                    <h3>Tags</h3>
                     <div className="stat-number">{tags.length}</div>
                     <div className="stat-info">{blockedTags} blocked</div>
-                    <Link to="/charge-tags" className="box-link">Manage charge tags</Link>
+                    <Link to="/charge-tags" className="box-link">Manage tags</Link>
                 </div>
 
                 <div className="stat-box">
@@ -109,7 +109,7 @@ function Home() {
             <div className="actions">
                 <h2>Quick Actions</h2>
                 <div className="action-buttons">
-                    <Link to="/charge-points" className="btn">Manage Charge Points</Link>
+                    <Link to="/charge-points" className="btn">Manage ChargePoints</Link>
                     <Link to="/charge-tags" className="btn">Manage Tags</Link>
                     <Link to="/charge-sessions" className="btn">View Sessions</Link>
                 </div>

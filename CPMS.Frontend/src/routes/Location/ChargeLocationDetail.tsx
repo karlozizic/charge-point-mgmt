@@ -56,7 +56,7 @@ function LocationDetail() {
                             <span className="value">{location.country}</span>
                         </div>
                         <div className="info-item">
-                            <span className="label">Total Charge Points:</span>
+                            <span className="label">Total ChargePoints:</span>
                             <span className="value">{location.totalChargePoints || 0}</span>
                         </div>
                         <div className="info-item">
@@ -73,10 +73,10 @@ function LocationDetail() {
 
                     <div className="actions">
                         <Link to="/charge-points" className="btn">
-                            View Charge Points
+                            View ChargePoints
                         </Link>
                         <Link to="/charge-points" className="btn btn-gray">
-                            Add Charge Point
+                            Add ChargePoint
                         </Link>
                     </div>
                 </div>
@@ -85,7 +85,7 @@ function LocationDetail() {
             {location.chargePoints && location.chargePoints.length > 0 && (
                 <div className="card">
                     <div className="card-header">
-                        <h2>Charge Points</h2>
+                        <h2>ChargePoints</h2>
                     </div>
                     <div className="card-body">
                         <table>

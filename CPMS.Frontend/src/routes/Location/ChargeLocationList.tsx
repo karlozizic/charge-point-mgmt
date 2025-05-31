@@ -70,7 +70,7 @@ function LocationList() {
                         <th>Address</th>
                         <th>City</th>
                         <th>Country</th>
-                        <th>Charge Points</th>
+                        <th>ChargePoints</th>
                         <th>Actions</th>
                     </tr>
                     </thead>

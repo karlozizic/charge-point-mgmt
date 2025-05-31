@@ -44,7 +44,7 @@ function ChargeSessionList() {
     return (
         <div className="sessions-page">
             <div className="page-header">
-                <h1>Charge Sessions</h1>
+                <h1>Sessions</h1>
                 <button
                     className="btn btn-gray"
                     onClick={() => setShowFilters(!showFilters)}
@@ -99,7 +99,7 @@ function ChargeSessionList() {
                     <tr>
                         <th>ID</th>
                         <th>Tag</th>
-                        <th>Charge Point</th>
+                        <th>ChargePoint</th>
                         <th>Start Time</th>
                         <th>Duration</th>
                         <th>Energy</th>

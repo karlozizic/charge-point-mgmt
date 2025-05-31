@@ -50,7 +50,7 @@ function ChargeSessionDetail() {
                     <h3>Basic Info</h3>
                     <div className="info-grid">
                         <div>Tag ID: <strong>{session.tagId}</strong></div>
-                        <div>Charge Point: <strong>{session.chargePointId}</strong></div>
+                        <div>ChargePoint: <strong>{session.chargePointId}</strong></div>
                         <div>Connector: <strong>{session.connectorId}</strong></div>
                         <div>Start: <strong>{new Date(session.startTime).toLocaleString()}</strong></div>
                         <div>Stop: <strong>{session.stopTime ? new Date(session.stopTime).toLocaleString() : 'Ongoing'}</strong></div>

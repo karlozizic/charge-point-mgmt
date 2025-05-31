@@ -69,22 +69,22 @@ const ChargePointList = () => {
         return location?.name || locationId.slice(0, 8) + '...';
     };
 
-    if (isLoading) return <div className="loading">Loading charge points...</div>;
+    if (isLoading) return <div className="loading">Loading ChargePoints...</div>;
 
     return (
         <div className="cp-list">
             <div className="flex-between">
-                <h1>Charge Points</h1>
+                <h1>ChargePoints</h1>
                 <div className="header-actions">
                     <Link to="/locations" className="btn btn-gray">Manage Locations</Link>
-                    <button className="btn" onClick={() => setShowModal(true)}>Add Charge Point</button>
+                    <button className="btn" onClick={() => setShowModal(true)}>Add ChargePoint</button>
                 </div>
             </div>
 
             {chargePoints.length === 0 ? (
                 <div className="empty">
-                    <p>No charge points found.</p>
-                    <p>Add a location first, then create charge points.</p>
+                    <p>No ChargePoints found.</p>
+                    <p>Add a location first, then create ChargePoints.</p>
                 </div>
             ) : (
                 <table>
@@ -120,7 +120,7 @@ const ChargePointList = () => {
                 <div className="overlay">
                     <div className="modal">
                         <div className="modal-header">
-                            <h2>Add New Charge Point</h2>
+                            <h2>Add New ChargePoint</h2>
                             <button className="close" onClick={() => setShowModal(false)}>&times;</button>
                         </div>
                         <div className="modal-body">

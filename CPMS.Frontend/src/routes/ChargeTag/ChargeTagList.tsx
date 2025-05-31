@@ -95,7 +95,7 @@ function ChargeTagList() {
 
             {!tags || tags.length === 0 ? (
                 <div className="empty">
-                    <p>No charge tags found. Add a new tag to get started.</p>
+                    <p>No Tags found. Add a new tag to get started.</p>
                 </div>
             ) : (
                 <table>
