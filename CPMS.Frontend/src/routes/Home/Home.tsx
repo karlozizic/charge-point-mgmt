@@ -5,6 +5,7 @@ import {chargeTagsApi} from "../../api/services/chargeTags.ts";
 import './Home.css';
 import {chargeSessionsApi} from "../../api/services/chargeSessions.ts";
 import type {ChargeSession} from "../../types/chargeSession.ts";
+import {chargeLocationsApi} from "../../api/services/chargeLocations.ts";
 
 function Home() {
     const { data: points = [] } = useQuery({
@@ -29,7 +30,7 @@ function Home() {
 
     const { data: locations = [] } = useQuery({
         queryKey: ['locations'],
-        queryFn: chargePointsApi.getAll,
+        queryFn: chargeLocationsApi.getAll,
     });
 
     const activePoints = points.filter(cp => cp.totalConnectors > 0).length;
@@ -105,15 +106,6 @@ function Home() {
                     )}
                 </div>
             )}
-
-            <div className="actions">
-                <h2>Quick Actions</h2>
-                <div className="action-buttons">
-                    <Link to="/charge-points" className="btn">Manage ChargePoints</Link>
-                    <Link to="/charge-tags" className="btn">Manage Tags</Link>
-                    <Link to="/charge-sessions" className="btn">View Sessions</Link>
-                </div>
-            </div>
         </div>
     );
 }

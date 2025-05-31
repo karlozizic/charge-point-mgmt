@@ -35,8 +35,8 @@ jobs:
           
       - name: Build and push Frontend
         run: |
-          docker build -f CPMS.Frontend/Dockerfile -t ${{ env.REGISTRY }}/cpms-frontend:latest .
-          docker push ${{ env.REGISTRY }}/cpms-frontend:latest
+           docker build -f CPMS.Frontend/Dockerfile -t ${{ env.REGISTRY }}/cpms-frontend:latest --build-arg VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.MAPBOX_ACCESS_TOKEN }} .
+           docker push ${{ env.REGISTRY }}/cpms-frontend:latest
 
       - name: Deploy API with environment variables
         run: |
