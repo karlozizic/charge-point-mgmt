@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chargeTagsApi } from '../api/services/chargeTags';
-import type { UpdateChargeTagCommand, UpdateChargeTagExpiryCommand } from '../types/chargeTag';
+import { chargeTagsApi } from '../../api/services/chargeTags.ts';
+import type { UpdateChargeTagCommand, UpdateChargeTagExpiryCommand } from '../../types/chargeTag.ts';
 
 function ChargeTagDetail() {
     const { id } = useParams<{ id: string }>();
@@ -121,7 +121,7 @@ function ChargeTagDetail() {
     }
 
     if (isLoading) return <div className="loading">Loading...</div>;
-    if (!tag) return <div className="empty">Charge tag not found</div>;
+    if (!tag) return <div className="empty">Tag not found</div>;
 
     return (
         <div className="charge-tag-detail">
@@ -129,7 +129,7 @@ function ChargeTagDetail() {
                 Back to List
             </button>
 
-            <h1>Charge Tag Details</h1>
+            <h1>Tag Details</h1>
 
             <div className="card">
                 <div className="card-header">

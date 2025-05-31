@@ -1,0 +1,15 @@
+.locations-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.location-detail {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.back {
+    margin-bottom: 15px;
+}

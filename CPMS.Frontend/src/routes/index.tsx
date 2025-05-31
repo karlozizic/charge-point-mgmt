@@ -1,10 +1,14 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import ChargeTagList from "./ChargeTagList.tsx";
-import ChargeTagDetail from "./ChargeTagDetail.tsx";
+import ChargeTagList from "./ChargeTag/ChargeTagList.tsx";
+import ChargeTagDetail from "./ChargeTag/ChargeTagDetail.tsx";
 import Layout from '../components/layout/Layout';
-import ChargePointDetail from "./ChargePointDetail.tsx";
-import ChargePointList from "./ChargePointList.tsx";
-import Home from "./Home.tsx";
+import ChargePointDetail from "./ChargePoint/ChargePointDetail.tsx";
+import ChargePointList from "./ChargePoint/ChargePointList.tsx";
+import Home from "./Home/Home.tsx";
+import ChargeSessionDetail from "./ChargeSession/ChargeSessionDetail.tsx";
+import ChargeSessionList from "./ChargeSession/ChargeSessionList.tsx";
+import ChargeLocationList from "./Location/ChargeLocationList.tsx";
+import ChargeLocationDetail from "./Location/ChargeLocationDetail.tsx";
 
 const router = createBrowserRouter([
     {
@@ -12,10 +16,14 @@ const router = createBrowserRouter([
         element: <Layout />,
         children: [
             { index: true, element: <Home /> },
+            { path: 'locations', element: <ChargeLocationList /> },
+            { path: 'locations/:id', element: <ChargeLocationDetail /> },
             { path: 'charge-points', element: <ChargePointList /> },
             { path: 'charge-points/:id', element: <ChargePointDetail /> },
             { path: 'charge-tags', element: <ChargeTagList /> },
             { path: 'charge-tags/:id', element: <ChargeTagDetail /> },
+            { path: 'charge-sessions', element: <ChargeSessionList /> },
+            { path: 'charge-sessions/:id', element: <ChargeSessionDetail /> },
         ],
     },
 ]);

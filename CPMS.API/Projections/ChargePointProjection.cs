@@ -55,6 +55,7 @@ public class ChargePointProjection : SingleStreamProjection<ChargePointReadModel
                     
                 model.ConnectorErrors.Add(new ConnectorErrorReadModel
                 {
+                    Id = Guid.NewGuid(),
                     ConnectorId = @event.ConnectorId,
                     ErrorCode = @event.ErrorCode,
                     Info = @event.Info,
