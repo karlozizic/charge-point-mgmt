@@ -5,6 +5,10 @@ COPY CPMS.Frontend/package*.json ./
 RUN npm install
 
 COPY CPMS.Frontend/ ./
+
+ARG VITE_MAPBOX_ACCESS_TOKEN
+ENV VITE_MAPBOX_ACCESS_TOKEN=$VITE_MAPBOX_ACCESS_TOKEN
+
 RUN npm run build
 
 FROM nginx:alpine

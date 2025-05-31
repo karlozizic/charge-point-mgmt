@@ -1,17 +1,21 @@
-import {useMutation, useQuery, useQueryClient,} from "@tanstack/react-query";
-import {chargeLocationsApi} from "../../api/services/chargeLocations.ts";
-import {Link} from "react-router-dom";
-import {useState} from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { chargeLocationsApi } from "../../api/services/chargeLocations.ts";
+import { Link } from "react-router-dom";
+import { useState } from "react";
+import AddressAutocomplete from "./AddressAutocomplete.tsx";
+
+interface AddressData {
+    address: string;
+    city: string;
+    country: string;
+    latitude: number;
+    longitude: number;
+}
 
 function LocationList() {
     const [showModal, setShowModal] = useState(false);
-    const [form, setForm] = useState({
-        name: '',
-        address: '',
-        city: '',
-        postalCode: '',
-        country: 'Croatia'
-    });
+    const [name, setName] = useState('');
+    const [selectedAddress, setSelectedAddress] = useState<AddressData | null>(null);
     const [error, setError] = useState('');
 
     const queryClient = useQueryClient();
@@ -24,33 +28,48 @@ function LocationList() {
         mutationFn: chargeLocationsApi.create,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['locations'] });
-            setShowModal(false);
-            setForm({ name: '', address: '', city: '', postalCode: '', country: 'Croatia' });
-            setError('');
+            resetForm();
         },
         onError: () => {
             setError('Failed to create location');
         }
     });
 
+    const resetForm = () => {
+        setName('');
+        setSelectedAddress(null);
+        setError('');
+        setShowModal(false);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
 
-        if (!form.name.trim() || !form.address.trim() || !form.city.trim()) {
-            setError('Name, address and city are required');
+        if (!name.trim()) {
+            setError('Location name is required');
             return;
         }
 
-        createLocation.mutate(form);
+        if (!selectedAddress) {
+            setError('Please select an address from suggestions');
+            return;
+        }
+
+        createLocation.mutate({
+            name: name.trim(),
+            address: selectedAddress.address,
+            city: selectedAddress.city,
+            postalCode: '',
+            country: selectedAddress.country,
+            latitude: selectedAddress.latitude,
+            longitude: selectedAddress.longitude
+        });
     };
 
-    if (isLoading) {
-        return <div className="loading">Loading locations...</div>;
-    }
+    if (isLoading) return <div className="loading">Loading locations...</div>;
 
     return (
-        <div className="locations-container">
+        <div className="cp-list">
             <div className="flex-between">
                 <h1>Locations</h1>
                 <button className="btn" onClick={() => setShowModal(true)}>
@@ -98,72 +117,52 @@ function LocationList() {
                     <div className="modal">
                         <div className="modal-header">
                             <h2>Add New Location</h2>
-                            <button className="close" onClick={() => setShowModal(false)}>&times;</button>
+                            <button className="close" onClick={resetForm}>&times;</button>
                         </div>
                         <div className="modal-body">
                             {error && <div className="error-msg">{error}</div>}
+
                             <form onSubmit={handleSubmit}>
                                 <div className="form-group">
                                     <label htmlFor="name">Location Name</label>
                                     <input
                                         type="text"
                                         id="name"
-                                        value={form.name}
-                                        onChange={e => setForm({...form, name: e.target.value})}
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
                                         placeholder="e.g. Main Street Station"
                                         required
                                     />
                                 </div>
+
                                 <div className="form-group">
-                                    <label htmlFor="address">Address</label>
-                                    <input
-                                        type="text"
-                                        id="address"
-                                        value={form.address}
-                                        onChange={e => setForm({...form, address: e.target.value})}
-                                        placeholder="e.g. Ilica 10"
-                                        required
-                                    />
+                                    <label>Address Search</label>
+                                    <AddressAutocomplete onSelect={setSelectedAddress} />
+                                    <small>Type at least 3 characters and select from suggestions</small>
                                 </div>
-                                <div className="form-group">
-                                    <label htmlFor="city">City</label>
-                                    <input
-                                        type="text"
-                                        id="city"
-                                        value={form.city}
-                                        onChange={e => setForm({...form, city: e.target.value})}
-                                        placeholder="Zagreb"
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label htmlFor="postalCode">Postal Code</label>
-                                    <input
-                                        type="text"
-                                        id="postalCode"
-                                        value={form.postalCode}
-                                        onChange={e => setForm({...form, postalCode: e.target.value})}
-                                        placeholder="10000"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label htmlFor="country">Country</label>
-                                    <select
-                                        id="country"
-                                        value={form.country}
-                                        onChange={e => setForm({...form, country: e.target.value})}
-                                    >
-                                        <option value="Croatia">Croatia</option>
-                                        <option value="Slovenia">Slovenia</option>
-                                        <option value="Austria">Austria</option>
-                                        <option value="Germany">Germany</option>
-                                    </select>
-                                </div>
+
+                                {selectedAddress && (
+                                    <div className="selected-address">
+                                        <strong>Selected:</strong> {selectedAddress.address}, {selectedAddress.city}, {selectedAddress.country}
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedAddress(null)}
+                                            className="btn-clear"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+                                )}
+
                                 <div className="form-buttons">
-                                    <button type="button" className="btn btn-gray" onClick={() => setShowModal(false)}>
+                                    <button type="button" className="btn btn-gray" onClick={resetForm}>
                                         Cancel
                                     </button>
-                                    <button type="submit" className="btn" disabled={createLocation.isPending}>
+                                    <button
+                                        type="submit"
+                                        className="btn"
+                                        disabled={createLocation.isPending || !selectedAddress}
+                                    >
                                         {createLocation.isPending ? 'Saving...' : 'Save'}
                                     </button>
                                 </div>

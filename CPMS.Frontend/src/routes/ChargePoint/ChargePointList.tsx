@@ -115,7 +115,6 @@ const ChargePointList = () => {
                 </table>
             )}
 
-            {/* Modal */}
             {showModal && (
                 <div className="overlay">
                     <div className="modal">
