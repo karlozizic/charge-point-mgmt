@@ -1,5 +1,5 @@
 import {useNavigate, useParams} from "react-router-dom";
-import {useQuery} from "@tanstack/react-query";
+import {useMutation, useQuery} from "@tanstack/react-query";
 import {chargeSessionsApi} from "../../api/services/chargeSessions.ts";
 import type {MeterValue} from "../../types/chargeSession.ts";
 
@@ -11,6 +11,14 @@ function ChargeSessionDetail() {
         queryKey: ['chargeSession', id],
         queryFn: () => chargeSessionsApi.getById(id!),
         enabled: !!id
+    });
+
+    const exportCsv = useMutation({
+        mutationFn: () => chargeSessionsApi.exportToCsv(id!),
+        onError: (error) => {
+            console.error('CSV export failed:', error);
+            alert('Failed to export CSV');
+        }
     });
 
     if (isLoading) return <div className="loading">Loading...</div>;
@@ -37,6 +45,16 @@ function ChargeSessionDetail() {
             <button className="btn btn-gray" onClick={() => navigate(-1)}>
                 ← Back
             </button>
+
+            <div className="download-actions">
+                <button
+                    className="btn btn-gray"
+                    onClick={() => exportCsv.mutate()}
+                    disabled={exportCsv.isPending}
+                >
+                    {exportCsv.isPending ? 'Generating...' : 'Export to CSV'}
+                </button>
+            </div>
 
             <div className="session-header">
                 <h1>Session #{session.transactionId}</h1>

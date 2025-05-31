@@ -26,5 +26,20 @@ export const chargeSessionsApi = {
     getStats: async () => {
         const response = await apiClient.get('/chargeSessions/stats');
         return response.data;
+    },
+
+    exportToCsv: async (sessionId: string) => {
+        const response = await apiClient.get(`/chargeSessions/${sessionId}/export/csv`, {
+            responseType: 'blob'
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `session-${sessionId}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
     }
 };

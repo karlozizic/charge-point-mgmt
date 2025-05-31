@@ -92,4 +92,20 @@ public class ChargeSessionsController : ControllerBase
         var stats = await _mediator.Send(query);
         return Ok(stats);
     }
+
+    [HttpGet("{sessionId}/export/csv")]
+    public async Task<IActionResult> ExportToCsv(Guid sessionId)
+    {
+        try
+        {
+            var csvContent = await _mediator.Send(new ExportChargeSessionToCsvQuery { SessionId = sessionId });
+            var fileName = $"session-{sessionId}-{DateTime.Now:yyyyMMdd}.csv";
+
+            return File(System.Text.Encoding.UTF8.GetBytes(csvContent), "text/csv", fileName);
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
+    }
 }
