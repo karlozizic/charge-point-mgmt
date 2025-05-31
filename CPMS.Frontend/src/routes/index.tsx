@@ -7,6 +7,8 @@ import ChargePointList from "./ChargePoint/ChargePointList.tsx";
 import Home from "./Home/Home.tsx";
 import ChargeSessionDetail from "./ChargeSession/ChargeSessionDetail.tsx";
 import ChargeSessionList from "./ChargeSession/ChargeSessionList.tsx";
+import ChargeLocationList from "./Location/ChargeLocationList.tsx";
+import ChargeLocationDetail from "./Location/ChargeLocationDetail.tsx";
 
 const router = createBrowserRouter([
     {
@@ -14,6 +16,8 @@ const router = createBrowserRouter([
         element: <Layout />,
         children: [
             { index: true, element: <Home /> },
+            { path: 'locations', element: <ChargeLocationList /> },
+            { path: 'locations/:id', element: <ChargeLocationDetail /> },
             { path: 'charge-points', element: <ChargePointList /> },
             { path: 'charge-points/:id', element: <ChargePointDetail /> },
             { path: 'charge-tags', element: <ChargeTagList /> },

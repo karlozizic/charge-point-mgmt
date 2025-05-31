@@ -47,18 +47,21 @@ public class GetAllLocationsQueryHandler : IRequestHandler<GetAllLocationsQuery,
 
         var locationIds = locations.Select(l => l.Id).ToList();
         
-        var chargePointStats = await _querySession
+        var chargePoints = await _querySession
             .Query<ChargePointReadModel>()
             .Where(cp => locationIds.Contains(cp.LocationId))
+            .ToListAsync(cancellationToken);
+
+        var chargePointStats = chargePoints
             .GroupBy(cp => cp.LocationId)
             .Select(g => new 
             { 
                 LocationId = g.Key, 
                 TotalChargePoints = g.Count(),
                 AvailableConnectors = g.SelectMany(cp => cp.Connectors)
-                                      .Count(c => c.Status == "Available")
+                    .Count(c => c.Status == "Available")
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var locationDtos = locations.Select(location => 
         {

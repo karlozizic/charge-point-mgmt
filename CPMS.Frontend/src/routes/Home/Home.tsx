@@ -27,12 +27,26 @@ function Home() {
         queryFn: chargeSessionsApi.getActive,
     });
 
+    const { data: locations = [] } = useQuery({
+        queryKey: ['locations'],
+        queryFn: chargePointsApi.getAll,
+    });
+
     const activePoints = points.filter(cp => cp.totalConnectors > 0).length;
     const blockedTags = tags.filter(tag => tag.blocked).length;
 
     return (
         <div className="home">
             <h1>Charge Point Management System</h1>
+
+            <div className="stats">
+                <div className="stat-box">
+                    <h3>Locations</h3>
+                    <div className="stat-number">{locations.length}</div>
+                    <div className="stat-info">{points.length} charge points</div>
+                    <Link to="/locations" className="box-link">Manage locations</Link>
+                </div>
+            </div>
 
             <div className="stats">
                 <div className="stat-box">
