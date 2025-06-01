@@ -32,6 +32,12 @@ public partial class ControllerOcpp16
 
             AuthorizeChargerResponse authorizationChargerResponse = await _cpmsClient.Authorize(authorizeChargerRequest);
 
+            if (authorizationChargerResponse.AuthorizationStatus == AuthorizationStatus.Accepted)
+            {
+                _authorizationCache.AddAuthorization(ChargePointStatus.Id, authorizeChargerRequest.IdTag);
+                Logger.Info($"Authorize => Tag {authorizeChargerRequest.IdTag} authorized for charge point {ChargePointStatus.Id}");
+            }
+
             authorizeResponse.IdTagInfo.Status = authorizationChargerResponse.AuthorizationStatus;
             msgOut.JsonPayload = JsonConvert.SerializeObject(authorizeResponse);
         }

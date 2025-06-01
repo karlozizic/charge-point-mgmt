@@ -12,7 +12,9 @@ builder.Logging.AddDebug();
 
 #region Services
 
+builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ILoggerService, LoggerService>();
+builder.Services.AddSingleton<IAuthorizationCache, AuthorizationCache>();
 builder.Services.AddHttpClient<ICpmsClient, CpmsClient>((serviceProvider, client) =>
 {
     var baseUrl = configuration["CpmsApi:BaseUrl"];

@@ -282,12 +282,14 @@ public partial class OcppMiddleware
     private ControllerOcpp16 CreateController(ChargePointStatus chargePointStatus)
     {
         var cpmsClient = _serviceProvider.GetRequiredService<ICpmsClient>();
+        var authorizationCache = _serviceProvider.GetRequiredService<IAuthorizationCache>();
         
         return new ControllerOcpp16(
             _configuration,
             chargePointStatus,
             _logger,
-            cpmsClient);
+            cpmsClient,
+            authorizationCache);
     }
     
     private async Task SendOcppMessage(OCPPMessage message, ChargePointStatus chargePointStatus)
