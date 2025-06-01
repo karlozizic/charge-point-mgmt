@@ -9,14 +9,17 @@ namespace CPMS.Proxy.Controllers.OCPP_1._6;
 public partial class ControllerOcpp16 : BaseController
 {
     private readonly ICpmsClient _cpmsClient;
+    private readonly IAuthorizationCache _authorizationCache;
     
     public ControllerOcpp16(IConfiguration config, 
         ChargePointStatus chargePointStatus,
         ILoggerService logger,
-        ICpmsClient cpmsClient) :
+        ICpmsClient cpmsClient,
+        IAuthorizationCache authorizationCache) :
         base(config, chargePointStatus, logger)
     {
         _cpmsClient = cpmsClient;
+        _authorizationCache = authorizationCache;
     }
 
     public override async Task<OCPPMessage> ProcessRequest(OCPPMessage msgIn)

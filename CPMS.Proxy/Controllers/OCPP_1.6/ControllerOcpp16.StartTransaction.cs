@@ -15,6 +15,22 @@ public partial class ControllerOcpp16
         {
             StartTransactionRequest startTransactionRequest = JsonConvert.DeserializeObject<StartTransactionRequest>(msgIn.JsonPayload) ?? throw new InvalidOperationException();
             Logger.Info("StartTransaction => Message deserialized");
+
+            if (!_authorizationCache.IsAuthorized(ChargePointStatus.Id, startTransactionRequest.IdTag))
+            {
+                Logger.Warning($"StartTransaction => Unauthorized attempt with IdTag: {startTransactionRequest.IdTag}");
+                StartTransactionResponse unauthorizedResponse = new StartTransactionResponse
+                {
+                    TransactionId = 0,
+                    IdTagInfo = new IdTagInfo
+                    {
+                        Status = AuthorizationStatus.Invalid
+                    }
+                };
+                
+                msgOut.JsonPayload = JsonConvert.SerializeObject(unauthorizedResponse);
+                return errorCode;
+            }
             
             StartTransactionChargerResponse startTransaction = new()
             {
