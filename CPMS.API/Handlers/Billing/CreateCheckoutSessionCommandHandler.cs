@@ -34,8 +34,8 @@ public class CreateCheckoutSessionCommandHandler : IRequestHandler<CreateCheckou
             throw new InvalidOperationException("Billing record not found");
 
         var baseUrl = _configuration["App:FrontendUrl"];
-        var successUrl = $"{baseUrl}/payment-success?session_id={{CHECKOUT_SESSION_ID}}&billing_session={billing.SessionId}";
-        var cancelUrl = $"{baseUrl}/charge-sessions/{billing.SessionId}";
+        var successUrl = $"{baseUrl}payment-success?session_id={{CHECKOUT_SESSION_ID}}&billing_session={billing.SessionId}";
+        var cancelUrl = $"{baseUrl}charge-sessions/{billing.SessionId}";
 
         var checkoutSession = await _stripeService.CreateCheckoutSessionAsync(
             billing.TotalAmount,
