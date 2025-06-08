@@ -1,0 +1,121 @@
+.payment-container {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 20px;
+    margin-bottom: 20px;
+    max-width: 500px;
+}
+
+.payment-success {
+    text-align: center;
+    padding: 20px;
+    background: #f6ffed;
+    border: 1px solid #b7eb8f;
+    border-radius: 4px;
+    color: #52c41a;
+}
+
+.payment-success h3 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+}
+
+.payment-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.billing-summary {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.billing-summary h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.cost-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cost-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.cost-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-top: 2px solid #1890ff;
+    margin-top: 8px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.payment-form h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.payment-btn {
+    background: #52c41a;
+    border-color: #52c41a;
+    width: 100%;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.payment-btn:hover {
+    background: #73d13d;
+    border-color: #73d13d;
+}
+
+.payment-btn:disabled {
+    background: #f5f5f5;
+    border-color: #d9d9d9;
+    color: #bfbfbf;
+    cursor: not-allowed;
+}
+
+.payment-info {
+    text-align: center;
+    padding: 15px;
+    background: #f0f8ff;
+    border-radius: 4px;
+    color: #666;
+    margin-top: 15px;
+}
+
+.payment-info p {
+    margin: 4px 0;
+    font-size: 14px;
+}
+
+.info-message {
+    text-align: center;
+    padding: 40px 20px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    color: #666;
+}
+
+.info-message h3 {
+    margin: 0 0 12px 0;
+    color: #333;
+}
