@@ -1,55 +1,44 @@
 name: Deploy to Azure
-
 on:
   push:
     branches: [main]
-
 env:
   REGISTRY: cpmsregistry.azurecr.io
   RESOURCE_GROUP: rg-cpms
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+   
     steps:
       - uses: actions/checkout@v4
-
       - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Login to Registry
         run: az acr login --name cpmsregistry
-
       - name: Build and push API
         run: |
           docker build -f CPMS.API/Dockerfile -t ${{ env.REGISTRY }}/cpms-api:latest .
           docker push ${{ env.REGISTRY }}/cpms-api:latest
-
       - name: Build and push Proxy
         run: |
           docker build -f CPMS.Proxy/Dockerfile -t ${{ env.REGISTRY }}/cpms-proxy:latest .
           docker push ${{ env.REGISTRY }}/cpms-proxy:latest
-          
+         
       - name: Build and push Frontend
         run: |
            docker build -f CPMS.Frontend/Dockerfile -t ${{ env.REGISTRY }}/cpms-frontend:latest --build-arg VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.MAPBOX_ACCESS_TOKEN }} .
            docker push ${{ env.REGISTRY }}/cpms-frontend:latest
-
       - name: Deploy API with environment variables
         run: |
-          az containerapp update --name cpms-api --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-api:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "ConnectionStrings__MartenDb=${{ secrets.DATABASE_CONNECTION_STRING }}" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug"
-
+          az containerapp update --name cpms-api --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-api:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "ConnectionStrings__MartenDb=${{ secrets.DATABASE_CONNECTION_STRING }}" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug" "Stripe__PublishableKey=${{ secrets.STRIPE_PUBLISHABLE_KEY }}" "Stripe__SecretKey=${{ secrets.STRIPE_SECRET_KEY }}" "Stripe__WebhookSecretProd=${{ secrets.STRIPE_WEBHOOK_SECRET_PROD }}"
       - name: Deploy Proxy with environment variables
         run: |
           az containerapp update --name cpms-proxy --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-proxy:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug"
-
       - name: Deploy Frontend
         run: |
           az containerapp update --name cpms-frontend --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-frontend:latest
-
       - name: Display service URLs
         run: |
           echo "Deployment complete!"

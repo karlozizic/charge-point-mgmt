@@ -1,0 +1,78 @@
+.unpaid-billings h2 {
+    margin: 0 0 20px 0;
+    color: #333;
+}
+
+.empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    background: #f5f5f5;
+    border-radius: 4px;
+    color: #666;
+}
+
+.billing-table {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.billing-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.billing-table th {
+    background: #f5f5f5;
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 500;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+}
+
+.billing-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.billing-table tr:hover {
+    background: #fafafa;
+}
+
+.amount-breakdown {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+}
+
+.status-badge {
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.status-badge.status.succeeded {
+    color: #52c41a;
+}
+
+.status-badge.status.pending {
+    color: #fa8c16;
+}
+
+.status-badge.status.failed {
+    color: #f5222d;
+}
+
+@media (max-width: 768px) {
+    .billing-table {
+        overflow-x: auto;
+    }
+
+    .billing-table table {
+        min-width: 500px;
+    }
+}

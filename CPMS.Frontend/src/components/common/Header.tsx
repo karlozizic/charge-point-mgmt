@@ -14,6 +14,7 @@ function Header() {
                     <li><Link to="/charge-points">ChargePoints</Link></li>
                     <li><Link to="/charge-tags">Tags</Link></li>
                     <li><Link to="/charge-sessions">Sessions</Link></li>
+                    <li><Link to="/billing">Billing</Link></li>
                 </ul>
             </nav>
         </header>

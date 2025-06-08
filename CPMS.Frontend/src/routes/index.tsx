@@ -9,6 +9,10 @@ import ChargeSessionDetail from "./ChargeSession/ChargeSessionDetail.tsx";
 import ChargeSessionList from "./ChargeSession/ChargeSessionList.tsx";
 import ChargeLocationList from "./Location/ChargeLocationList.tsx";
 import ChargeLocationDetail from "./Location/ChargeLocationDetail.tsx";
+import BillingDashboard from "./Billing/BillingDashboard.tsx";
+import PricingGroupList from "./Billing/PricingGroupList.tsx";
+import PaymentSuccess from "./Billing/PaymentSuccess.tsx";
+import PaymentCancel from "./Billing/PaymentCancel.tsx";
 
 const router = createBrowserRouter([
     {
@@ -24,6 +28,10 @@ const router = createBrowserRouter([
             { path: 'charge-tags/:id', element: <ChargeTagDetail /> },
             { path: 'charge-sessions', element: <ChargeSessionList /> },
             { path: 'charge-sessions/:id', element: <ChargeSessionDetail /> },
+            { path: 'billing', element: <BillingDashboard /> },
+            { path: 'billing/pricing-groups', element: <PricingGroupList /> },
+            { path: 'payment-success', element: <PaymentSuccess /> },
+            { path: 'payment-cancel', element: <PaymentCancel /> },
         ],
     },
 ]);

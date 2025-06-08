@@ -1,16 +1,20 @@
 using CPMS.API.Entities;
 using CPMS.API.Projections;
 using Marten;
+using MediatR;
 
 namespace CPMS.API.Repositories;
 
 public class ChargeSessionRepository : IChargeSessionRepository
 {
     private readonly IDocumentSession _session;
+    private readonly IMediator _mediator;
     
-    public ChargeSessionRepository(IDocumentSession session)
+    public ChargeSessionRepository(IDocumentSession session,
+        IMediator mediator)
     {
         _session = session;
+        _mediator = mediator;
     }
     
     public async Task<ChargeSession?> GetByIdAsync(Guid id)
@@ -46,6 +50,7 @@ public class ChargeSessionRepository : IChargeSessionRepository
         foreach (var domainEvent in chargeSession.DomainEvents)
         {
             _session.Events.Append(chargeSession.Id, domainEvent);
+            await _mediator.Publish(domainEvent);
         }
             
         chargeSession.ClearDomainEvents();
