@@ -23,6 +23,8 @@ public class LoggerService : ILoggerService
     public void Info(string message, string memberName = "", string filePath = "", int lineNumber = 0)
     {
         var logMessage = FormatLogMessage("INFO", message, memberName, filePath, lineNumber);
+        
+        Console.WriteLine(logMessage);
         _logger.LogInformation(logMessage);
     }
 
@@ -33,6 +35,8 @@ public class LoggerService : ILoggerService
         if (ex != null)
         {
             var fullMessage = $"{logMessage} | Exception: {ex.Message} | StackTrace: {ex.StackTrace}";
+            Console.WriteLine(fullMessage);
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
             _logger.LogError(fullMessage);
         }
         else
@@ -44,12 +48,14 @@ public class LoggerService : ILoggerService
     public void Warning(string message, string memberName = "", string filePath = "", int lineNumber = 0)
     {
         var logMessage = FormatLogMessage("WARNING", message, memberName, filePath, lineNumber);
+        Console.WriteLine(logMessage);
         _logger.LogWarning(logMessage);
     }
 
     public void Debug(string message, string memberName = "", string filePath = "", int lineNumber = 0)
     {
         var logMessage = FormatLogMessage("DEBUG", message, memberName, filePath, lineNumber);
+        Console.WriteLine(logMessage);
         _logger.LogDebug(logMessage);
     }
 
