@@ -10,6 +10,7 @@
       <PackageReference Include="Autofac" Version="8.2.1" />
       <PackageReference Include="Marten" Version="7.40.1" />
       <PackageReference Include="MediatR" Version="12.5.0" />
+      <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.23.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.15" />
       <PackageReference Include="Serilog" Version="4.2.0" />
     </ItemGroup>

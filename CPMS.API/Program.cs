@@ -9,17 +9,36 @@ using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddApplicationInsightsTelemetry();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
 
 builder.Services.AddMediatR(cfg => {
     cfg.RegisterServicesFromAssemblyContaining<Program>();
 });
+
+builder.Logging.AddConsole(options =>
+{
+    options.IncludeScopes = false;
+    options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
+});
+
+builder.Logging.AddApplicationInsights(
+    configureTelemetryConfiguration: config =>
+        config.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"],
+    configureApplicationInsightsLoggerOptions: (options) => { }
+);
+
+builder.Logging.SetMinimumLevel(LogLevel.Trace);
+
+builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
+builder.Logging.AddFilter("System", LogLevel.Warning);
+builder.Logging.AddFilter("CPMS", LogLevel.Information);
+builder.Logging.AddFilter("CPMS.BuildingBlocks.Infrastructure.Logger", LogLevel.Information);
 
 StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY") ?? builder.Configuration["Stripe:SecretKey"];
 

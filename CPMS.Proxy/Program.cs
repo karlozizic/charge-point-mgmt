@@ -6,9 +6,29 @@ using Microsoft.AspNetCore.WebSockets;
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
+builder.Services.AddApplicationInsightsTelemetry();
+
 builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
+
+builder.Logging.AddConsole(options =>
+{
+    options.IncludeScopes = false;
+    options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
+});
+
+builder.Logging.AddApplicationInsights(
+    configureTelemetryConfiguration: config =>
+        config.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"],
+    configureApplicationInsightsLoggerOptions: (options) => { }
+);
+
+builder.Logging.SetMinimumLevel(LogLevel.Trace);
+
+builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
+builder.Logging.AddFilter("System", LogLevel.Warning);
+builder.Logging.AddFilter("CPMS", LogLevel.Information);
+builder.Logging.AddFilter("CPMS.BuildingBlocks.Infrastructure.Logger", LogLevel.Information);
+builder.Logging.AddFilter("CPMS.Proxy", LogLevel.Information);
 
 #region Services
 
@@ -47,6 +67,9 @@ builder.Services.AddHealthChecks()
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Proxy is running"));
 
 var app = builder.Build();
+
+var logger = app.Services.GetRequiredService<ILoggerService>();
+logger.Info("Proxy application starting up");
 
 app.UseWebSockets();
 
