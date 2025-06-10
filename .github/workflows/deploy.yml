@@ -32,10 +32,10 @@ jobs:
            docker push ${{ env.REGISTRY }}/cpms-frontend:latest
       - name: Deploy API with environment variables
         run: |
-          az containerapp update --name cpms-api --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-api:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "ConnectionStrings__MartenDb=${{ secrets.DATABASE_CONNECTION_STRING }}" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug" "Stripe__PublishableKey=${{ secrets.STRIPE_PUBLISHABLE_KEY }}" "Stripe__SecretKey=${{ secrets.STRIPE_SECRET_KEY }}" "Stripe__WebhookSecretProd=${{ secrets.STRIPE_WEBHOOK_SECRET_PROD }}"
+          az containerapp update --name cpms-api --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-api:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "ConnectionStrings__MartenDb=${{ secrets.DATABASE_CONNECTION_STRING }}" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug" "Stripe__PublishableKey=${{ secrets.STRIPE_PUBLISHABLE_KEY }}" "Stripe__SecretKey=${{ secrets.STRIPE_SECRET_KEY }}" "Stripe__WebhookSecretProd=${{ secrets.STRIPE_WEBHOOK_SECRET_PROD }}" "ApplicationInsights__ConnectionString=${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}"
       - name: Deploy Proxy with environment variables
         run: |
-          az containerapp update --name cpms-proxy --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-proxy:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug"
+          az containerapp update --name cpms-proxy --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-proxy:latest --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" "Logging__LogLevel__Default=Information" "Logging__LogLevel__CPMS=Debug" "ApplicationInsights__ConnectionString=${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}"
       - name: Deploy Frontend
         run: |
           az containerapp update --name cpms-frontend --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.REGISTRY }}/cpms-frontend:latest
