@@ -3,6 +3,7 @@ using CPMS.API.Repositories;
 using Marten;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
+using Stripe.Checkout;
 
 namespace CPMS.API.Controllers;
 
@@ -30,28 +31,44 @@ public class WebhookController : ControllerBase
     [HttpPost("stripe")]
     public async Task<IActionResult> HandleStripeWebhook()
     {
-        var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-        var endpointSecret = Environment.GetEnvironmentVariable("STRIPE_WEBHOOK_SECRET_PROD") ?? _configuration["Stripe:WebhookSecretProd"];
+        _logger.LogInformation("Received Stripe webhook request");
         
+        var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+        var endpointSecret = Environment.GetEnvironmentVariable("STRIPE_WEBHOOK_SECRET_PROD") ?? 
+                             _configuration["Stripe:WebhookSecretProd"];
+
         try
         {
             var stripeEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"], endpointSecret);
         
-            _logger.LogInformation("Stripe webhook: {EventType}", stripeEvent.Type);
+            _logger.LogInformation("Webhook: {EventType}", stripeEvent.Type);
 
             if (stripeEvent.Type == "checkout.session.completed")
             {
-                var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
-            
-                var billingReadModel = await _querySession
-                    .Query<SessionBillingReadModel>()
-                    .FirstOrDefaultAsync(b => b.StripeSessionId == session.Id);
-
-                if (billingReadModel != null)
+                if (stripeEvent.Data.Object is Session session)
                 {
-                    var billing = await _billingRepository.GetByIdAsync(billingReadModel.Id);
-                    billing?.MarkAsPaid();
-                    await _billingRepository.UpdateAsync(billing);
+                    var billing = await _querySession
+                        .Query<SessionBillingReadModel>()
+                        .FirstOrDefaultAsync(b => b.StripeSessionId == session.Id);
+
+                    if (billing != null)
+                    {
+                        await MarkBillingAsPaid(billing.Id);
+                    }
+                }
+            }
+            else if (stripeEvent.Type == "payment_intent.succeeded")
+            {
+                var recentBilling = await _querySession
+                    .Query<SessionBillingReadModel>()
+                    .Where(b => b.PaymentStatus == "pending_payment")
+                    .OrderByDescending(b => b.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (recentBilling != null)
+                {
+                    _logger.LogInformation("Marking recent billing as paid: {BillingId}", recentBilling.Id);
+                    await MarkBillingAsPaid(recentBilling.Id);
                 }
             }
 
@@ -61,6 +78,29 @@ public class WebhookController : ControllerBase
         {
             _logger.LogError(ex, "Stripe webhook error");
             return BadRequest();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Webhook error");
+            return BadRequest();
+        }
+    }
+
+    private async Task MarkBillingAsPaid(Guid billingId)
+    {
+        try
+        {
+            var billing = await _billingRepository.GetByIdAsync(billingId);
+            if (billing?.PaymentStatus != "succeeded")
+            {
+                billing?.MarkAsPaid();
+                await _billingRepository.UpdateAsync(billing);
+                _logger.LogInformation("Billing marked as paid: {BillingId}", billingId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to mark billing as paid: {BillingId}", billingId);
         }
     }
 }
