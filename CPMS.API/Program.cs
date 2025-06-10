@@ -1,5 +1,3 @@
-using CPMS.API.Events.ChargeSession;
-using CPMS.API.Handlers.ChargeSession;
 using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.API.Services;
@@ -25,7 +23,6 @@ builder.Services.AddMediatR(cfg => {
 
 StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY") ?? builder.Configuration["Stripe:SecretKey"];
 
-builder.Services.AddSingleton<ILoggerService, LoggerService>();
 builder.Services.AddScoped<IChargePointRepository, ChargePointRepository>();
 builder.Services.AddScoped<IChargeSessionRepository, ChargeSessionRepository>();
 builder.Services.AddScoped<IPricingGroupRepository, PricingGroupRepository>();

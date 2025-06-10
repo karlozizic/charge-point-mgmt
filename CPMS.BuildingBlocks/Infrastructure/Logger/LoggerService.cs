@@ -22,39 +22,78 @@ public class LoggerService : ILoggerService
 
     public void Info(string message, string memberName = "", string filePath = "", int lineNumber = 0)
     {
-        string concisePath = GetConcisePath(filePath);
-        _logger.LogInformation("{Message} at {MemberName} in {ConcisePath}:{LineNumber}", 
-            message, memberName, concisePath, lineNumber);
+        var logMessage = FormatLogMessage("INFO", message, memberName, filePath, lineNumber);
+        _logger.LogInformation(logMessage);
     }
 
     public void Error(string message, Exception ex = null, string memberName = "", string filePath = "", int lineNumber = 0)
     {
-        string concisePath = GetConcisePath(filePath);
-        _logger.LogError(ex, "{Message} at {MemberName} in {ConcisePath}:{LineNumber}", 
-            message, memberName, concisePath, lineNumber);
+        var logMessage = FormatLogMessage("ERROR", message, memberName, filePath, lineNumber);
+        
+        if (ex != null)
+        {
+            var fullMessage = $"{logMessage} | Exception: {ex.Message} | StackTrace: {ex.StackTrace}";
+            _logger.LogError(fullMessage);
+        }
+        else
+        {
+            _logger.LogError(logMessage);
+        }
     }
 
     public void Warning(string message, string memberName = "", string filePath = "", int lineNumber = 0)
     {
-        string concisePath = GetConcisePath(filePath);
-        _logger.LogWarning("{Message} at {MemberName} in {ConcisePath}:{LineNumber}", 
-            message, memberName, concisePath, lineNumber);
+        var logMessage = FormatLogMessage("WARNING", message, memberName, filePath, lineNumber);
+        _logger.LogWarning(logMessage);
     }
 
     public void Debug(string message, string memberName = "", string filePath = "", int lineNumber = 0)
     {
-        string concisePath = GetConcisePath(filePath);
-        _logger.LogDebug("{Message} at {MemberName} in {ConcisePath}:{LineNumber}", 
-            message, memberName, concisePath, lineNumber);
+        var logMessage = FormatLogMessage("DEBUG", message, memberName, filePath, lineNumber);
+        _logger.LogDebug(logMessage);
     }
 
-    private static string GetConcisePath(string fullPath)
+    private static string FormatLogMessage(string level, string message, string memberName, string filePath, int lineNumber)
     {
-        string keyFolder;
-        keyFolder = fullPath.Contains("CPMS.Api") ? "CPMS.Api" : "CPMS.Proxy";
+        var fileName = GetFileName(filePath);
+        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
         
-        int startIndex = fullPath.IndexOf(keyFolder, StringComparison.Ordinal);
+        return $"[{timestamp}] [{level}] {message} | Method: {memberName} | File: {fileName} | Line: {lineNumber}";
+    }
 
-        return startIndex > -1 ? fullPath.Substring(startIndex + keyFolder.Length).TrimStart('/', '\\') : fullPath;
+    private static string GetFileName(string fullPath)
+    {
+        if (string.IsNullOrEmpty(fullPath)) 
+            return "Unknown";
+
+        try
+        {
+            var fileName = Path.GetFileName(fullPath);
+            
+            if (fullPath.Contains("CPMS.Api"))
+            {
+                var apiIndex = fullPath.IndexOf("CPMS.Api", StringComparison.Ordinal);
+                if (apiIndex > -1)
+                {
+                    var relativePath = fullPath.Substring(apiIndex + "CPMS.Api".Length).TrimStart('/', '\\');
+                    return $"CPMS.Api/{relativePath}";
+                }
+            }
+            else if (fullPath.Contains("CPMS.Proxy"))
+            {
+                var proxyIndex = fullPath.IndexOf("CPMS.Proxy", StringComparison.Ordinal);
+                if (proxyIndex > -1)
+                {
+                    var relativePath = fullPath.Substring(proxyIndex + "CPMS.Proxy".Length).TrimStart('/', '\\');
+                    return $"CPMS.Proxy/{relativePath}";
+                }
+            }
+            
+            return fileName;
+        }
+        catch
+        {
+            return "Unknown";
+        }
     }
 }
