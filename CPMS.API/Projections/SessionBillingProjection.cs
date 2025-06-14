@@ -3,7 +3,7 @@ using Marten.Events.Aggregation;
 
 namespace CPMS.API.Projections;
 
-public class SessionBillingProjection : SingleStreamProjection<SessionBillingReadModel>
+public class SessionBillingProjection : SingleStreamProjection<SessionBillingReadModel, Guid>
 {
     public SessionBillingProjection()
     {

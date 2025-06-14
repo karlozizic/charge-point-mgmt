@@ -1,5 +1,6 @@
 using CPMS.API.Entities;
 using CPMS.API.Projections;
+using CPMS.BuildingBlocks.Infrastructure.DomainEventsDispatching;
 using Marten;
 
 namespace CPMS.API.Repositories;
@@ -7,10 +8,16 @@ namespace CPMS.API.Repositories;
 public class LocationRepository : ILocationRepository
 {
     private readonly IDocumentSession _session;
+    private readonly IDomainEventsDispatcher _domainEventsDispatcher;
+    private readonly MartenDomainEventsAccessor _eventsAccessor;
 
-    public LocationRepository(IDocumentSession session)
+    public LocationRepository(IDocumentSession session,
+        IDomainEventsDispatcher domainEventsDispatcher,
+        MartenDomainEventsAccessor eventsAccessor)
     {
         _session = session;
+        _domainEventsDispatcher = domainEventsDispatcher;
+        _eventsAccessor = eventsAccessor;
     }
     
     public async Task<Location?> GetByIdAsync(Guid id)
@@ -31,26 +38,34 @@ public class LocationRepository : ILocationRepository
 
     public async Task AddAsync(Location location)
     {
+        var events = location.DomainEvents.ToList();
+        
         foreach (var domainEvent in location.DomainEvents)
         {
             _session.Events.Append(location.Id, domainEvent);
         }
-            
+        
+        _eventsAccessor.AddEvents(events);    
         location.ClearDomainEvents();
-            
+                
         await _session.SaveChangesAsync();
+        await _domainEventsDispatcher.DispatchEventsAsync();
     }
 
     public async Task UpdateAsync(Location location)
     {
+        var events = location.DomainEvents.ToList();
+        
         foreach (var domainEvent in location.DomainEvents)
         {
             _session.Events.Append(location.Id, domainEvent);
         }
-            
+        
+        _eventsAccessor.AddEvents(events);
         location.ClearDomainEvents();
             
         await _session.SaveChangesAsync();
+        await _domainEventsDispatcher.DispatchEventsAsync();
     }
 
     public async Task<bool> ExistsAsync(Guid id)

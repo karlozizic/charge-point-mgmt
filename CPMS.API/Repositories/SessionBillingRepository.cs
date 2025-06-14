@@ -1,5 +1,6 @@
 using CPMS.API.Entities;
 using CPMS.API.Projections;
+using CPMS.BuildingBlocks.Infrastructure.DomainEventsDispatching;
 using Marten;
 
 namespace CPMS.API.Repositories;
@@ -8,11 +9,18 @@ public class SessionBillingRepository : ISessionBillingRepository
 {
     private readonly IDocumentSession _session;
     private readonly ILogger<SessionBillingRepository> _logger;
+    private readonly MartenDomainEventsAccessor _domainEventsAccessor;
+    private readonly IDomainEventsDispatcher _domainEventsDispatcher;
     
-    public SessionBillingRepository(IDocumentSession session, ILogger<SessionBillingRepository> logger)
+    public SessionBillingRepository(IDocumentSession session,
+        ILogger<SessionBillingRepository> logger,
+        MartenDomainEventsAccessor domainEventsAccessor,
+        IDomainEventsDispatcher domainEventsDispatcher)
     {
         _session = session;
         _logger = logger;
+        _domainEventsAccessor = domainEventsAccessor;
+        _domainEventsDispatcher = domainEventsDispatcher;
     }
     
     public async Task<SessionBilling?> GetByIdAsync(Guid id)
@@ -62,16 +70,19 @@ public class SessionBillingRepository : ISessionBillingRepository
             return;
         }
 
+        var domainEvents = billing.DomainEvents.ToList();
         _logger.LogInformation("Adding SessionBilling with {EventCount} domain events", billing.DomainEvents.Count);
 
         foreach (var domainEvent in billing.DomainEvents)
         {
             _session.Events.Append(billing.Id, domainEvent);
         }
-        
+
+        _domainEventsAccessor.AddEvents(domainEvents);
         billing.ClearDomainEvents();
-        await _session.SaveChangesAsync();
         
+        await _session.SaveChangesAsync();
+        await _domainEventsDispatcher.DispatchEventsAsync();
         _logger.LogInformation("Successfully added SessionBilling: {Id}", billing.Id);
     }
     
@@ -94,6 +105,8 @@ public class SessionBillingRepository : ISessionBillingRepository
             _logger.LogInformation("SessionBilling has no domain events to persist");
             return;
         }
+        
+        var domainEvents = billing.DomainEvents.ToList();
 
         _logger.LogInformation("Updating SessionBilling {Id} with {EventCount} domain events", 
             billing.Id, billing.DomainEvents.Count);
@@ -106,8 +119,11 @@ public class SessionBillingRepository : ISessionBillingRepository
                 _logger.LogDebug("Appended event: {EventType}", domainEvent.GetType().Name);
             }
             
+            _domainEventsAccessor.AddEvents(domainEvents);
             billing.ClearDomainEvents();
+            
             await _session.SaveChangesAsync();
+            await _domainEventsDispatcher.DispatchEventsAsync();
             
             _logger.LogInformation("Successfully updated SessionBilling: {Id}", billing.Id);
         }

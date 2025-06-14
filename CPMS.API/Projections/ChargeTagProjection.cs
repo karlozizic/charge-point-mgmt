@@ -3,7 +3,7 @@ using Marten.Events.Aggregation;
 
 namespace CPMS.API.Projections;
 
-public class ChargeTagProjection : SingleStreamProjection<ChargeTagReadModel>
+public class ChargeTagProjection : SingleStreamProjection<ChargeTagReadModel, Guid>
 {
     public ChargeTagProjection()
     {

@@ -1,12 +1,11 @@
 using CPMS.API.Events.ChargePoint;
 using CPMS.API.Events.Connector;
-using Marten;
 using Marten.Events.Aggregation;
 using ConnectorStatusChangedEvent = CPMS.API.Events.ChargePoint.ConnectorStatusChangedEvent;
 
 namespace CPMS.API.Projections;
 
-public class ChargePointProjection : SingleStreamProjection<ChargePointReadModel>
+public class ChargePointProjection : SingleStreamProjection<ChargePointReadModel, Guid>
 {
     public ChargePointProjection()
     {

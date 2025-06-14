@@ -4,7 +4,8 @@ namespace CPMS.BuildingBlocks.Infrastructure.DomainEventsDispatching;
 
 public interface IDomainEventsAccessor
 {
-    IReadOnlyCollection<IDomainEvent> GetAllDomainEvents();
+    void AddEvents(IEnumerable<IDomainEvent> domainEvents);
+    IReadOnlyCollection<IDomainEvent> GetAllEvents();
 
-    void ClearAllDomainEvents();
+    void ClearAllEvents();
 }
