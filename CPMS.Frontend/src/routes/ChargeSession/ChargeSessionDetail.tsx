@@ -32,26 +32,14 @@ function ChargeSessionDetail() {
         return `${hours}h ${minutes}m`;
     };
 
-
     const handleExportToCsv = async () => {
-        const response = await fetch(`/api/chargesessions/${id}/export/csv`);
-
-        if (!response.ok) {
+        try {
+            await chargeSessionsApi.exportToCsv(id!);
+        } catch (error) {
+            console.error('Export failed:', error);
             alert('Export failed. Please check console for details.');
-            return;
         }
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `session-${session.transactionId}-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
     };
-
 
     const isSessionCompleted = session.status === 'Stopped';
 
