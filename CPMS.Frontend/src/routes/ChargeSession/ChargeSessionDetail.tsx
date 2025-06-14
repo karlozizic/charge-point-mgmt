@@ -32,6 +32,12 @@ function ChargeSessionDetail() {
         return `${hours}h ${minutes}m`;
     };
 
+
+    const handleExportToCsv = () => {
+        window.open(`/api/chargesessions/${id}/export/csv`, '_blank');
+    };
+
+
     const isSessionCompleted = session.status === 'Stopped';
 
     return (
@@ -45,6 +51,9 @@ function ChargeSessionDetail() {
                 <span className={`status ${session.status === 'Started' ? 'active' : 'completed'}`}>
                     {session.status}
                 </span>
+                <button className="btn btn-primary" onClick={handleExportToCsv}>
+                    Export CSV
+                </button>
             </div>
 
             <div className="session-content">

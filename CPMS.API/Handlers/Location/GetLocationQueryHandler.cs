@@ -2,7 +2,6 @@ using CPMS.API.Dtos;
 using CPMS.API.Projections;
 using Marten;
 using MediatR;
-using OpenTelemetry.Trace;
 
 namespace CPMS.API.Handlers.Location;
 

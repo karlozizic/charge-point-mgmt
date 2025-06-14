@@ -3,7 +3,7 @@ using Marten.Events.Aggregation;
 
 namespace CPMS.API.Projections;
 
-public class PricingGroupProjection : SingleStreamProjection<PricingGroupReadModel>
+public class PricingGroupProjection : SingleStreamProjection<PricingGroupReadModel, Guid>
 {
     public PricingGroupProjection()
     {

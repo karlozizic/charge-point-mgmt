@@ -1,20 +1,23 @@
 using CPMS.API.Entities;
 using CPMS.API.Projections;
+using CPMS.BuildingBlocks.Infrastructure.DomainEventsDispatching;
 using Marten;
-using MediatR;
 
 namespace CPMS.API.Repositories;
 
 public class ChargeSessionRepository : IChargeSessionRepository
 {
     private readonly IDocumentSession _session;
-    private readonly IMediator _mediator;
+    private readonly MartenDomainEventsAccessor _domainEventsAccessor;
+    private readonly IDomainEventsDispatcher _domainEventsDispatcher;
     
-    public ChargeSessionRepository(IDocumentSession session,
-        IMediator mediator)
+    public ChargeSessionRepository(IDocumentSession session
+        , MartenDomainEventsAccessor domainEventsAccessor
+        , IDomainEventsDispatcher domainEventsDispatcher)
     {
         _session = session;
-        _mediator = mediator;
+        _domainEventsAccessor = domainEventsAccessor;
+        _domainEventsDispatcher = domainEventsDispatcher;
     }
     
     public async Task<ChargeSession?> GetByIdAsync(Guid id)
@@ -35,27 +38,34 @@ public class ChargeSessionRepository : IChargeSessionRepository
 
     public async Task AddAsync(ChargeSession chargeSession)
     {
-        foreach (var domainEvent in chargeSession.DomainEvents)
+        var domainEvents = chargeSession.DomainEvents.ToList();
+        
+        foreach (var domainEvent in domainEvents)
         {
             _session.Events.Append(chargeSession.Id, domainEvent);
         }
             
+        _domainEventsAccessor.AddEvents(domainEvents);
         chargeSession.ClearDomainEvents();
-            
+        
         await _session.SaveChangesAsync();
+        await _domainEventsDispatcher.DispatchEventsAsync();
     }
 
     public async Task UpdateAsync(ChargeSession chargeSession)
     {
-        foreach (var domainEvent in chargeSession.DomainEvents)
+        var domainEvents = chargeSession.DomainEvents.ToList();
+        
+        foreach (var domainEvent in domainEvents)
         {
             _session.Events.Append(chargeSession.Id, domainEvent);
-            await _mediator.Publish(domainEvent);
         }
-            
+        
+        _domainEventsAccessor.AddEvents(domainEvents);
         chargeSession.ClearDomainEvents();
-            
+        
         await _session.SaveChangesAsync();
+        await _domainEventsDispatcher.DispatchEventsAsync();
     }
 }
 
