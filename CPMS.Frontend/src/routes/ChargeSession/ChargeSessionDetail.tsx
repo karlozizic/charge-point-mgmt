@@ -33,8 +33,23 @@ function ChargeSessionDetail() {
     };
 
 
-    const handleExportToCsv = () => {
-        window.open(`/api/chargesessions/${id}/export/csv`, '_blank');
+    const handleExportToCsv = async () => {
+        const response = await fetch(`/api/chargesessions/${id}/export/csv`);
+
+        if (!response.ok) {
+            alert('Export failed. Please check console for details.');
+            return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `session-${session.transactionId}-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
     };
 
 
