@@ -49,7 +49,6 @@ public class ChargePointRepository : IChargePointRepository
         chargePoint.ClearDomainEvents();
             
         await _session.SaveChangesAsync();
-        await _domainEventsDispatcher.DispatchEventsAsync();
     }
         
     public async Task UpdateAsync(ChargePoint chargePoint)
@@ -65,7 +64,6 @@ public class ChargePointRepository : IChargePointRepository
         _domainEventsAccessor.AddEvents(domainEvents);
             
         await _session.SaveChangesAsync();
-        await _domainEventsDispatcher.DispatchEventsAsync();
     }
 }
 
