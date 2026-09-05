@@ -1,12 +1,13 @@
-import { useState} from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {chargeSessionsApi} from "../../api/services/chargeSessions.ts";
+import { chargeSessionsApi } from '../../api/services/chargeSessions';
+import type { SessionFilters } from '../../types/chargeSession';
+import { formatDuration, formatEnergy, shortId } from '../../utils/format';
 import './ChargeSessionList.css';
-import type {ChargeSession} from "../../types/chargeSession.ts";
 
 function ChargeSessionList() {
-    const [filters, setFilters] = useState({});
+    const [filters, setFilters] = useState<SessionFilters>({});
     const [showFilters, setShowFilters] = useState(false);
 
     const { data: sessions = [], isLoading } = useQuery({
@@ -16,28 +17,8 @@ function ChargeSessionList() {
 
     const { data: stats } = useQuery({
         queryKey: ['sessionStats'],
-        queryFn: () => chargeSessionsApi.getStats(),
+        queryFn: chargeSessionsApi.getStats,
     });
-
-    const calculateEnergy = (session : ChargeSession) => {
-        if (session.energyDeliveredKWh && session.energyDeliveredKWh > 0) {
-            return session.energyDeliveredKWh.toFixed(2);
-        }
-
-        return '0.00';
-    };
-
-    const formatDuration = (startTime: string, stopTime?: string) => {
-        if (!stopTime) return 'Ongoing';
-        const diff = new Date(stopTime).getTime() - new Date(startTime).getTime();
-        const hours = Math.floor(diff / 3600000);
-        const minutes = Math.floor((diff % 3600000) / 60000);
-        return `${hours}h ${minutes}m`;
-    };
-
-    const getStatusClass = (status: string) => {
-        return status === 'Started' ? 'status-active' : 'status-completed';
-    };
 
     if (isLoading) return <div className="loading">Loading sessions...</div>;
 
@@ -45,12 +26,7 @@ function ChargeSessionList() {
         <div className="sessions-page">
             <div className="page-header">
                 <h1>Sessions</h1>
-                <button
-                    className="btn btn-gray"
-                    onClick={() => setShowFilters(!showFilters)}
-                >
-                    Filters
-                </button>
+                <button className="btn btn-gray" onClick={() => setShowFilters(!showFilters)}>Filters</button>
             </div>
 
             {stats && (
@@ -68,7 +44,7 @@ function ChargeSessionList() {
                         <span className="stat-label">Completed</span>
                     </div>
                     <div className="stat-box">
-                        <span className="stat-number">{stats.totalEnergyDelivered?.toFixed(1) || '0'} kWh</span>
+                        <span className="stat-number">{stats.totalEnergyDelivered.toFixed(1)} kWh</span>
                         <span className="stat-label">Total Energy</span>
                     </div>
                 </div>
@@ -76,7 +52,7 @@ function ChargeSessionList() {
 
             {showFilters && (
                 <div className="filters">
-                    <select onChange={(e) => setFilters({...filters, status: e.target.value})}>
+                    <select onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined })}>
                         <option value="">All Status</option>
                         <option value="Started">Active</option>
                         <option value="Stopped">Completed</option>
@@ -84,11 +60,11 @@ function ChargeSessionList() {
                     <input
                         type="text"
                         placeholder="Tag ID"
-                        onChange={(e) => setFilters({...filters, tagId: e.target.value})}
+                        onChange={(e) => setFilters({ ...filters, tagId: e.target.value || undefined })}
                     />
                     <input
                         type="date"
-                        onChange={(e) => setFilters({...filters, startDate: e.target.value})}
+                        onChange={(e) => setFilters({ ...filters, startDate: e.target.value || undefined })}
                     />
                 </div>
             )}
@@ -108,23 +84,21 @@ function ChargeSessionList() {
                     </tr>
                     </thead>
                     <tbody>
-                    {sessions.map((session: ChargeSession) => (
+                    {sessions.map(session => (
                         <tr key={session.id}>
                             <td>{session.transactionId}</td>
                             <td>{session.tagId}</td>
-                            <td>{session.chargePointId.slice(0, 8)}...</td>
+                            <td>{shortId(session.chargePointId)}</td>
                             <td>{new Date(session.startTime).toLocaleString()}</td>
                             <td>{formatDuration(session.startTime, session.stopTime)}</td>
-                            <td>{calculateEnergy(session)} kWh</td>
+                            <td>{formatEnergy(session.energyDeliveredKWh)} kWh</td>
                             <td>
-                                    <span className={`status ${getStatusClass(session.status)}`}>
-                                        {session.status}
-                                    </span>
+                                <span className={`status ${session.status === 'Started' ? 'status-active' : 'status-completed'}`}>
+                                    {session.status}
+                                </span>
                             </td>
                             <td>
-                                <Link to={`/charge-sessions/${session.id}`} className="btn btn-sm">
-                                    View
-                                </Link>
+                                <Link to={`/charge-sessions/${session.id}`} className="btn btn-sm">View</Link>
                             </td>
                         </tr>
                     ))}

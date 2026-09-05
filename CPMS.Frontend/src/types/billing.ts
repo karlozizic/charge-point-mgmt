@@ -29,13 +29,6 @@ export interface CreatePricingGroupCommand {
     currency: string;
 }
 
-export interface PaymentIntentResponse {
-    paymentIntentId: string;
-    clientSecret: string;
-    amount: number;
-    currency: string;
-}
-
 export interface CheckoutSessionResponse {
     sessionId: string;
     url: string;

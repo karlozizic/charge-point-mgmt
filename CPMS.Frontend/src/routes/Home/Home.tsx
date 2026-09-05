@@ -1,37 +1,21 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import {chargePointsApi} from "../../api/services/chargePoints.ts";
-import {chargeTagsApi} from "../../api/services/chargeTags.ts";
+import { chargePointsApi } from '../../api/services/chargePoints';
+import { chargeTagsApi } from '../../api/services/chargeTags';
+import { chargeSessionsApi } from '../../api/services/chargeSessions';
+import { chargeLocationsApi } from '../../api/services/chargeLocations';
 import './Home.css';
-import {chargeSessionsApi} from "../../api/services/chargeSessions.ts";
-import type {ChargeSession} from "../../types/chargeSession.ts";
-import {chargeLocationsApi} from "../../api/services/chargeLocations.ts";
 
 function Home() {
-    const { data: points = [] } = useQuery({
-        queryKey: ['chargePoints'],
-        queryFn: chargePointsApi.getAll,
-    });
+    // Captured once per mount so render stays pure; the page refetches data, not the clock.
+    const [now] = useState(() => Date.now());
 
-    const { data: tags = [] } = useQuery({
-        queryKey: ['chargeTags'],
-        queryFn: chargeTagsApi.getAll,
-    });
-
-    const { data: stats } = useQuery({
-        queryKey: ['sessionStats'],
-        queryFn: chargeSessionsApi.getStats,
-    });
-
-    const { data: activeSessions = [] } = useQuery({
-        queryKey: ['activeSessions'],
-        queryFn: chargeSessionsApi.getActive,
-    });
-
-    const { data: locations = [] } = useQuery({
-        queryKey: ['locations'],
-        queryFn: chargeLocationsApi.getAll,
-    });
+    const { data: points = [] } = useQuery({ queryKey: ['chargePoints'], queryFn: chargePointsApi.getAll });
+    const { data: tags = [] } = useQuery({ queryKey: ['chargeTags'], queryFn: chargeTagsApi.getAll });
+    const { data: stats } = useQuery({ queryKey: ['sessionStats'], queryFn: chargeSessionsApi.getStats });
+    const { data: activeSessions = [] } = useQuery({ queryKey: ['activeSessions'], queryFn: chargeSessionsApi.getActive });
+    const { data: locations = [] } = useQuery({ queryKey: ['locations'], queryFn: chargeLocationsApi.getAll });
 
     const activePoints = points.filter(cp => cp.totalConnectors > 0).length;
     const blockedTags = tags.filter(tag => tag.blocked).length;
@@ -66,14 +50,14 @@ function Home() {
 
                 <div className="stat-box">
                     <h3>Sessions</h3>
-                    <div className="stat-number">{stats?.totalSessions || 0}</div>
-                    <div className="stat-info">{stats?.activeSessions || 0} active</div>
+                    <div className="stat-number">{stats?.totalSessions ?? 0}</div>
+                    <div className="stat-info">{stats?.activeSessions ?? 0} active</div>
                     <Link to="/charge-sessions" className="box-link">View sessions</Link>
                 </div>
 
                 <div className="stat-box">
                     <h3>Energy</h3>
-                    <div className="stat-number">{stats?.totalEnergyDelivered?.toFixed(1) || '0'} kWh</div>
+                    <div className="stat-number">{(stats?.totalEnergyDelivered ?? 0).toFixed(1)} kWh</div>
                     <div className="stat-info">Total delivered</div>
                     <Link to="/charge-sessions" className="box-link">View details</Link>
                 </div>
@@ -83,18 +67,16 @@ function Home() {
                 <div className="active-sessions">
                     <h2>Active Sessions ({activeSessions.length})</h2>
                     <div className="session-list">
-                        {activeSessions.slice(0, 3).map((session : ChargeSession) => {
-                            const duration = Math.floor((Date.now() - new Date(session.startTime).getTime()) / 60000);
+                        {activeSessions.slice(0, 3).map(session => {
+                            const minutes = Math.floor((now - new Date(session.startTime).getTime()) / 60000);
                             return (
                                 <div key={session.id} className="session-item">
                                     <div className="session-info">
                                         <strong>{session.tagId}</strong>
                                         <span>Connector {session.connectorId}</span>
-                                        <span>{duration}min</span>
+                                        <span>{minutes}min</span>
                                     </div>
-                                    <Link to={`/charge-sessions/${session.id}`} className="btn btn-sm">
-                                        View
-                                    </Link>
+                                    <Link to={`/charge-sessions/${session.id}`} className="btn btn-sm">View</Link>
                                 </div>
                             );
                         })}

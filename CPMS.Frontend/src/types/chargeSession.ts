@@ -1,4 +1,3 @@
-
 export interface ChargeSession {
     id: string;
     transactionId: number;
@@ -27,6 +26,8 @@ export interface SessionStats {
     activeSessions: number;
     completedSessions: number;
     totalEnergyDelivered: number;
+    averageSessionDuration: number;
+    averageEnergyPerSession: number;
 }
 
 export interface SessionFilters {

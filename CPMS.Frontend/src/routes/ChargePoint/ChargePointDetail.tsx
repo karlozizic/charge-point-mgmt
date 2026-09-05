@@ -1,335 +1,224 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chargePointsApi } from '../../api/services/chargePoints.ts';
+import { chargePointsApi } from '../../api/services/chargePoints';
+import Modal from '../../components/common/Modal';
+import { formatPower } from '../../utils/format';
 import './ChargePointDetail.css';
 
+const CONNECTOR_STATUSES = [
+    ['Available', 'Available'],
+    ['Preparing', 'Preparing'],
+    ['Charging', 'Charging'],
+    ['SuspendedEVSE', 'Suspended (EVSE)'],
+    ['SuspendedEV', 'Suspended (EV)'],
+    ['Finishing', 'Finishing'],
+    ['Reserved', 'Reserved'],
+    ['Unavailable', 'Unavailable'],
+    ['Faulted', 'Faulted'],
+] as const;
+
+const emptyStatusForm = { status: 'Available', errorCode: '', info: '' };
+
 const ChargePointDetail = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
-  const [showAddConnectorModal, setShowAddConnectorModal] = useState(false);
-  const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
-  const [selectedConnector, setSelectedConnector] = useState<number | null>(null);
+    const [showAddConnectorModal, setShowAddConnectorModal] = useState(false);
+    const [selectedConnector, setSelectedConnector] = useState<number | null>(null);
+    const [connectorName, setConnectorName] = useState('');
+    const [statusForm, setStatusForm] = useState(emptyStatusForm);
+    const [error, setError] = useState('');
 
-  const [newConnector, setNewConnector] = useState({
-    name: ''
-  });
+    const { data: chargePoint, isLoading } = useQuery({
+        queryKey: ['chargePoint', id],
+        queryFn: () => chargePointsApi.getById(id!),
+        enabled: !!id,
+    });
 
-  const [connectorStatus, setConnectorStatus] = useState({
-    status: 'Available',
-    errorCode: '',
-    info: ''
-  });
+    const invalidate = () => queryClient.invalidateQueries({ queryKey: ['chargePoint', id] });
 
-  const [error, setError] = useState('');
+    const addConnector = useMutation({
+        mutationFn: (name: string) =>
+            chargePointsApi.addConnector(chargePoint!.ocppChargerId, { ocppChargerId: chargePoint!.ocppChargerId, name }),
+        onSuccess: () => {
+            invalidate();
+            setShowAddConnectorModal(false);
+            setConnectorName('');
+        },
+        onError: () => setError('Failed to add connector'),
+    });
 
-  const { data: chargePoint, isLoading } = useQuery({
-    queryKey: ['chargePoint', id],
-    queryFn: () => chargePointsApi.getById(id || ''),
-    enabled: !!id
-  });
+    const updateStatus = useMutation({
+        mutationFn: (connectorId: number) =>
+            chargePointsApi.updateConnectorStatus(id!, connectorId, {
+                ocppChargerId: chargePoint!.ocppChargerId,
+                chargePointId: id!,
+                connectorId,
+                ...statusForm,
+                timestamp: new Date().toISOString(),
+            }),
+        onSuccess: () => {
+            invalidate();
+            setSelectedConnector(null);
+            setStatusForm(emptyStatusForm);
+        },
+        onError: () => setError('Failed to update connector status'),
+    });
 
-  const addConnectorMutation = useMutation({
-    mutationFn: (data: { ocppChargerId: string, name: string }) =>
-        chargePointsApi.addConnector(data.ocppChargerId, {
-          ocppChargerId: data.ocppChargerId,
-          name: data.name
-        }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chargePoint', id] });
-      setShowAddConnectorModal(false);
-      setNewConnector({ name: '' });
-    },
-    onError: (err) => {
-      console.error('Error adding connector:', err);
-      setError('Failed to add connector');
-    }
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: (data: {
-      chargePointId: string,
-      connectorId: number,
-      status: string,
-      errorCode: string,
-      info: string
-    }) => chargePointsApi.updateConnectorStatus(
-        data.chargePointId,
-        data.connectorId,
-        {
-          ocppChargerId: chargePoint?.ocppChargerId || '',
-          chargePointId: data.chargePointId,
-          connectorId: data.connectorId,
-          status: data.status,
-          errorCode: data.errorCode,
-          info: data.info,
-          timestamp: new Date().toISOString()
+    const handleAddConnector = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!connectorName) {
+            setError('Connector name is required');
+            return;
         }
-    ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chargePoint', id] });
-      setShowUpdateStatusModal(false);
-      setSelectedConnector(null);
-      setConnectorStatus({
-        status: 'Available',
-        errorCode: '',
-        info: ''
-      });
-    },
-    onError: (err) => {
-      console.error('Error updating status:', err);
-      setError('Failed to update connector status');
-    }
-  });
+        addConnector.mutate(connectorName);
+    };
 
-  const handleAddConnector = (e: React.FormEvent) => {
-    e.preventDefault();
+    const handleUpdateStatus = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (selectedConnector !== null) updateStatus.mutate(selectedConnector);
+    };
 
-    if (!newConnector.name) {
-      setError('Connector name is required');
-      return;
-    }
+    const openUpdateStatusModal = (connectorId: number) => {
+        const connector = chargePoint?.connectors?.find(c => c.id === connectorId);
+        setSelectedConnector(connectorId);
+        setStatusForm({ ...emptyStatusForm, status: connector?.status || 'Available' });
+    };
 
-    if (chargePoint) {
-      addConnectorMutation.mutate({
-        ocppChargerId: chargePoint.ocppChargerId,
-        name: newConnector.name
-      });
-    }
-  };
+    if (isLoading) return <div className="loading">Loading ChargePoint details...</div>;
+    if (!chargePoint) return <div className="empty">ChargePoint not found</div>;
 
-  const handleUpdateStatus = (e: React.FormEvent) => {
-    e.preventDefault();
+    return (
+        <div className="cp-detail">
+            <button className="btn btn-gray back" onClick={() => navigate(-1)}>Back to List</button>
 
-    if (!id || selectedConnector === null) return;
+            <h1>ChargePoint Details</h1>
 
-    updateStatusMutation.mutate({
-      chargePointId: id,
-      connectorId: selectedConnector,
-      status: connectorStatus.status,
-      errorCode: connectorStatus.errorCode,
-      info: connectorStatus.info
-    });
-  };
-
-  const openUpdateStatusModal = (connectorId: number) => {
-    const connector = chargePoint?.connectors?.find(c => c.id === connectorId);
-    setSelectedConnector(connectorId);
-    setConnectorStatus({
-      status: connector?.status || 'Available',
-      errorCode: '',
-      info: ''
-    });
-    setShowUpdateStatusModal(true);
-  };
-
-  if (isLoading) return <div className="loading">Loading ChargePoint details...</div>;
-  if (!chargePoint) return <div className="empty">ChargePoint not found</div>;
-
-  return (
-      <div className="cp-detail">
-        <button className="btn btn-gray back" onClick={() => navigate(-1)}>
-          Back to List
-        </button>
-
-        <h1>ChargePoint Details</h1>
-
-        <div className="card">
-          <div className="card-header">
-            <h2>{chargePoint.ocppChargerId}</h2>
-          </div>
-
-          <div className="card-body">
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="label">ID:</span>
-                <span className="value">{chargePoint.id}</span>
-              </div>
-              <div className="info-item">
-                <span className="label">OCPP ID:</span>
-                <span className="value">{chargePoint.ocppChargerId}</span>
-              </div>
-              <div className="info-item">
-                <span className="label">Location:</span>
-                <span className="value">{chargePoint.locationId}</span>
-              </div>
-              <div className="info-item">
-                <span className="label">Max Power:</span>
-                <span className="value">
-                {chargePoint.maxPower ? `${chargePoint.maxPower} kW` : 'N/A'}
-              </span>
-              </div>
-              <div className="info-item">
-                <span className="label">Current Power:</span>
-                <span className="value">
-                {chargePoint.currentPower ? `${chargePoint.currentPower} kW` : 'N/A'}
-              </span>
-              </div>
+            <div className="card">
+                <div className="card-header">
+                    <h2>{chargePoint.ocppChargerId}</h2>
+                </div>
+                <div className="card-body">
+                    <div className="info-grid">
+                        <div className="info-item"><span className="label">ID:</span><span className="value">{chargePoint.id}</span></div>
+                        <div className="info-item"><span className="label">OCPP ID:</span><span className="value">{chargePoint.ocppChargerId}</span></div>
+                        <div className="info-item"><span className="label">Location:</span><span className="value">{chargePoint.locationId}</span></div>
+                        <div className="info-item"><span className="label">Max Power:</span><span className="value">{formatPower(chargePoint.maxPower)}</span></div>
+                        <div className="info-item"><span className="label">Current Power:</span><span className="value">{formatPower(chargePoint.currentPower)}</span></div>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            <div className="connectors-section">
+                <div className="section-header">
+                    <h2>Connectors</h2>
+                    <button className="btn" onClick={() => setShowAddConnectorModal(true)}>Add Connector</button>
+                </div>
+
+                {!chargePoint.connectors?.length ? (
+                    <div className="empty">
+                        <p>No connectors available. Add a connector to get started.</p>
+                    </div>
+                ) : (
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {chargePoint.connectors.map(connector => (
+                            <tr key={connector.id}>
+                                <td>{connector.id}</td>
+                                <td>{connector.name}</td>
+                                <td>
+                                    <span className={`status-badge ${connector.status?.toLowerCase() || 'available'}`}>
+                                        {connector.status || 'Available'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button className="btn btn-gray" onClick={() => openUpdateStatusModal(connector.id)}>
+                                        Update Status
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+
+            {showAddConnectorModal && (
+                <Modal title="Add New Connector" onClose={() => setShowAddConnectorModal(false)} error={error}>
+                    <form onSubmit={handleAddConnector}>
+                        <div className="form-group">
+                            <label htmlFor="connectorName">Connector Name</label>
+                            <input
+                                type="text"
+                                id="connectorName"
+                                value={connectorName}
+                                onChange={(e) => setConnectorName(e.target.value)}
+                            />
+                        </div>
+                        <div className="form-buttons">
+                            <button type="button" className="btn btn-gray" onClick={() => setShowAddConnectorModal(false)}>Cancel</button>
+                            <button type="submit" className="btn" disabled={addConnector.isPending}>
+                                {addConnector.isPending ? 'Saving...' : 'Save'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {selectedConnector !== null && (
+                <Modal title="Update Connector Status" onClose={() => setSelectedConnector(null)} error={error}>
+                    <form onSubmit={handleUpdateStatus}>
+                        <div className="form-group">
+                            <label htmlFor="status">Status</label>
+                            <select
+                                id="status"
+                                value={statusForm.status}
+                                onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
+                            >
+                                {CONNECTOR_STATUSES.map(([value, label]) => (
+                                    <option key={value} value={value}>{label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="errorCode">Error Code (optional)</label>
+                            <input
+                                type="text"
+                                id="errorCode"
+                                value={statusForm.errorCode}
+                                onChange={(e) => setStatusForm({ ...statusForm, errorCode: e.target.value })}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="info">Additional Info (optional)</label>
+                            <textarea
+                                id="info"
+                                rows={3}
+                                value={statusForm.info}
+                                onChange={(e) => setStatusForm({ ...statusForm, info: e.target.value })}
+                            />
+                        </div>
+                        <div className="form-buttons">
+                            <button type="button" className="btn btn-gray" onClick={() => setSelectedConnector(null)}>Cancel</button>
+                            <button type="submit" className="btn" disabled={updateStatus.isPending}>
+                                {updateStatus.isPending ? 'Updating...' : 'Update'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
         </div>
-
-        <div className="connectors-section">
-          <div className="section-header">
-            <h2>Connectors</h2>
-            <button className="btn" onClick={() => setShowAddConnectorModal(true)}>
-              Add Connector
-            </button>
-          </div>
-
-          {chargePoint.connectors?.length === 0 ? (
-              <div className="empty">
-                <p>No connectors available. Add a connector to get started.</p>
-              </div>
-          ) : (
-              <table>
-                <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {chargePoint.connectors?.map(connector => (
-                    <tr key={connector.id}>
-                      <td>{connector.id}</td>
-                      <td>{connector.name}</td>
-                      <td>
-                      <span className={`status-badge ${connector.status?.toLowerCase() || 'available'}`}>
-                        {connector.status || 'Available'}
-                      </span>
-                      </td>
-                      <td>
-                        <button
-                            className="btn btn-gray"
-                            onClick={() => openUpdateStatusModal(connector.id)}
-                        >
-                          Update Status
-                        </button>
-                      </td>
-                    </tr>
-                ))}
-                </tbody>
-              </table>
-          )}
-        </div>
-
-        {/* Add Connector Modal */}
-        {showAddConnectorModal && (
-            <div className="overlay">
-              <div className="modal">
-                <div className="modal-header">
-                  <h2>Add New Connector</h2>
-                  <button className="close" onClick={() => setShowAddConnectorModal(false)}>&times;</button>
-                </div>
-                <div className="modal-body">
-                  {error && <div className="error-msg">{error}</div>}
-                  <form onSubmit={handleAddConnector}>
-                    <div className="form-group">
-                      <label htmlFor="connectorName">Connector Name</label>
-                      <input
-                          type="text"
-                          id="connectorName"
-                          value={newConnector.name}
-                          onChange={(e) => setNewConnector({ name: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-buttons">
-                      <button
-                          type="button"
-                          className="btn btn-gray"
-                          onClick={() => setShowAddConnectorModal(false)}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                          type="submit"
-                          className="btn"
-                          disabled={addConnectorMutation.isPending}
-                      >
-                        {addConnectorMutation.isPending ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-        )}
-
-        {/* Update Status Modal */}
-        {showUpdateStatusModal && selectedConnector !== null && (
-            <div className="overlay">
-              <div className="modal">
-                <div className="modal-header">
-                  <h2>Update Connector Status</h2>
-                  <button className="close" onClick={() => setShowUpdateStatusModal(false)}>&times;</button>
-                </div>
-                <div className="modal-body">
-                  {error && <div className="error-msg">{error}</div>}
-                  <form onSubmit={handleUpdateStatus}>
-                    <div className="form-group">
-                      <label htmlFor="status">Status</label>
-                      <select
-                          id="status"
-                          value={connectorStatus.status}
-                          onChange={(e) => setConnectorStatus({...connectorStatus, status: e.target.value})}
-                      >
-                        <option value="Available">Available</option>
-                        <option value="Preparing">Preparing</option>
-                        <option value="Charging">Charging</option>
-                        <option value="SuspendedEVSE">Suspended (EVSE)</option>
-                        <option value="SuspendedEV">Suspended (EV)</option>
-                        <option value="Finishing">Finishing</option>
-                        <option value="Reserved">Reserved</option>
-                        <option value="Unavailable">Unavailable</option>
-                        <option value="Faulted">Faulted</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="errorCode">Error Code (optional)</label>
-                      <input
-                          type="text"
-                          id="errorCode"
-                          value={connectorStatus.errorCode}
-                          onChange={(e) => setConnectorStatus({...connectorStatus, errorCode: e.target.value})}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="info">Additional Info (optional)</label>
-                      <textarea
-                          id="info"
-                          rows={3}
-                          value={connectorStatus.info}
-                          onChange={(e) => setConnectorStatus({...connectorStatus, info: e.target.value})}
-                      />
-                    </div>
-                    <div className="form-buttons">
-                      <button
-                          type="button"
-                          className="btn btn-gray"
-                          onClick={() => setShowUpdateStatusModal(false)}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                          type="submit"
-                          className="btn"
-                          disabled={updateStatusMutation.isPending}
-                      >
-                        {updateStatusMutation.isPending ? 'Updating...' : 'Update'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-        )}
-      </div>
-  );
+    );
 };
 
 export default ChargePointDetail;
