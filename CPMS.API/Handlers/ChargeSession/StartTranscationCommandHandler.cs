@@ -77,7 +77,7 @@ public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCo
             IdTagInfo = new IdTagInfo
             {
                 Status = AuthorizationStatus.Accepted,
-                ExpiryDate = tag.ExpiryDate.HasValue ? new DateTimeOffset(tag.ExpiryDate.Value) : default
+                ExpiryDate = tag.ExpiryDate.HasValue ? new DateTimeOffset(tag.ExpiryDate.Value) : null
             }
         };
     }

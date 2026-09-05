@@ -216,14 +216,19 @@ public class OcppMiddleware
             CancellationToken.None);
     }
 
+    /// <summary>
+    /// Sends a close frame without waiting for the peer's answer. Covers both cases: acknowledging a
+    /// close the charger started (state CloseReceived) and closing a socket we are replacing (state Open).
+    /// </summary>
     private async Task CloseQuietly(ChargePointStatus chargePoint, string reason)
     {
-        if (chargePoint.WebSocket.State != WebSocketState.Open)
+        var state = chargePoint.WebSocket.State;
+        if (state != WebSocketState.Open && state != WebSocketState.CloseReceived)
             return;
 
         try
         {
-            await chargePoint.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, reason, CancellationToken.None);
+            await chargePoint.WebSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, reason, CancellationToken.None);
         }
         catch (Exception ex)
         {

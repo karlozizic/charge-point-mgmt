@@ -73,7 +73,7 @@ public class ChargePoint : Entity, IAggregateRoot
         _connectors.Single(c => c.Id == @event.ConnectorId).UpdateStatus(@event.Status, @event.Timestamp);
     }
 
-    public void RegisterBoot(string serial, string model, string vendor, string firmwareVersion)
+    public void RegisterBoot(string? serial, string model, string vendor, string? firmwareVersion)
     {
         var @event = new ChargePointBootedEvent(Id, serial, model, vendor, firmwareVersion, DateTime.UtcNow);
 

@@ -5,18 +5,18 @@ namespace CPMS.API.Events.ChargePoint;
 public class ChargePointBootedEvent : DomainEventBase
 {
     public Guid ChargePointId { get; }
-    public string Serial { get; }
+    public string? Serial { get; }
     public string Model { get; }
     public string Vendor { get; }
-    public string FirmwareVersion { get; }
+    public string? FirmwareVersion { get; }
     public DateTime BootTime { get; }
-        
+
     public ChargePointBootedEvent(
         Guid chargePointId,
-        string serial,
+        string? serial,
         string model,
         string vendor,
-        string firmwareVersion,
+        string? firmwareVersion,
         DateTime bootTime)
     {
         ChargePointId = chargePointId;

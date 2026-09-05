@@ -64,7 +64,7 @@ public partial class ControllerOcpp16
 
     private string NotSupported(string action)
     {
-        Logger.Error($"Unknown action: {action}");
+        Logger.Warning($"Unsupported action: {action}");
         return ErrorCodes.NotSupported;
     }
 }
