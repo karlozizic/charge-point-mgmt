@@ -1,4 +1,4 @@
-using CPMS.Proxy.Models;
+﻿using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
 using StatusNotificationRequest = CPMS.Core.Models.Requests.StatusNotificationRequest;
@@ -38,7 +38,7 @@ public partial class ControllerOcpp16
                 Logger.Info("Status notification message with connector id 0");
             }
 
-            //msgOut.JsonPayload = JsonConvert.ToString();
+            msgOut.JsonPayload = JsonConvert.SerializeObject(new Proxy.OCPP_1._6.StatusNotificationResponse());
         }
         catch (Exception exp)
         {
