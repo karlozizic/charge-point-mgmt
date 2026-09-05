@@ -1,207 +1,105 @@
+using System.Net;
 using System.Net.Http.Json;
 using CPMS.BuildingBlocks.Infrastructure.Logger;
 using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Requests;
 using CPMS.Core.Models.Responses;
-using CPMS.Proxy.Models;
-using CPMS.Proxy.OCPP_1._6;
-using Newtonsoft.Json;
-using BootNotificationRequest = CPMS.Core.Models.Requests.BootNotificationRequest;
-using ClearChargingProfileResponse = CPMS.Core.Models.Responses.ClearChargingProfileResponse;
-using MeterValuesRequest = CPMS.Core.Models.Requests.MeterValuesRequest;
-using SetChargingProfileResponse = CPMS.Core.Models.Responses.SetChargingProfileResponse;
-using StatusNotificationRequest = CPMS.Core.Models.Requests.StatusNotificationRequest;
 
 namespace CPMS.Proxy.Services;
 
-public class CpmsClient : ICpmsClient
-{
-    private readonly HttpClient _client;
-    private readonly ILoggerService _loggerService;
-    private const string ApiPath = "api/Proxy";
-
-    public CpmsClient(
-        HttpClient client,
-        ILoggerService loggerService)
-    {
-        _client = client;
-        _loggerService = loggerService;
-    }
-
-    public async Task<AuthorizeChargerResponse> Authorize(AuthorizeChargerRequest authorizeChargerRequest)
-    {
-        try
-        {
-            _loggerService.Info($"Sending request {JsonConvert.SerializeObject(authorizeChargerRequest)} to CPMS API");
-            
-            var response = await _client.PostAsJsonAsync(
-                $"{ApiPath}/Authorize", 
-                authorizeChargerRequest);
-
-            response.EnsureSuccessStatusCode();
-
-            var authorizationResponse = await response.Content.ReadFromJsonAsync<AuthorizeChargerResponse>();
-
-            _loggerService.Info($"Received response {JsonConvert.SerializeObject(authorizationResponse)} from CPMS API");
-
-            return authorizationResponse!;
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-
-    public async Task BootNotification(BootNotificationRequest bootNotificationRequest)
-    {
-        try
-        {
-            var jsonRequest = JsonConvert.SerializeObject(bootNotificationRequest, Formatting.Indented);
-            _loggerService.Info($"Sending BootNotification JSON: {jsonRequest}");
-        
-            var response = await _client.PutAsJsonAsync($"{ApiPath}/BootNotification", bootNotificationRequest);
-        
-            var statusCode = (int)response.StatusCode;
-            var responseContent = await response.Content.ReadAsStringAsync();
-            _loggerService.Info($"Received response: StatusCode={statusCode}, Content={responseContent}");
-        
-            response.EnsureSuccessStatusCode();
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-
-    public async Task ChargingProfileCleared(ClearChargingProfileResponse response)
-    {
-        try
-        {
-            _loggerService.Info($"Sending request {response} to CPMS API");
-            await _client.PostAsJsonAsync($"{ApiPath}/ChargingProfileCleared", response);   
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-
-    public async Task MeterValues(MeterValuesRequest meterValuesRequest)
-    {
-        try
-        {
-            _loggerService.Info($"Sending request {meterValuesRequest} to CPMS API");
-            await _client.PutAsJsonAsync($"{ApiPath}/MeterValues", meterValuesRequest);
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-
-    public async Task Reset(ResetChargerResponse resetResponse)
-    {
-        try
-        {
-            _loggerService.Info($"Sending request {resetResponse} to CPMS API");
-            await _client.PostAsJsonAsync($"{ApiPath}/Reset", resetResponse);
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-
-    public async Task ChargingProfileSet(SetChargingProfileResponse setChargingProfileResponse)
-    {
-        try
-        {
-            _loggerService.Info($"Sending request {setChargingProfileResponse} to CPMS API");
-            await _client.PostAsJsonAsync($"{ApiPath}/ChargingProfileSet", setChargingProfileResponse);
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-
-    public async Task<StartTransactionResponse> StartTransaction(StartTransactionChargerResponse response)
-    {
-        try
-        {
-            _loggerService.Info($"Sending request {JsonConvert.SerializeObject(response)} to CPMS API");
-            var startTransactionResponse = await _client.PostAsJsonAsync($"{ApiPath}/StartTransaction", response);
-            _loggerService.Info($"Received response {await startTransactionResponse.Content.ReadAsStringAsync()} from CPMS API");
-            return await startTransactionResponse.Content.ReadFromJsonAsync<StartTransactionResponse>() ?? throw new InvalidOperationException();
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-
-    public async Task StatusNotification(StatusNotificationRequest statusNotificationRequest)
-    {
-        try
-        {
-            _loggerService.Info($"Sending request {statusNotificationRequest} to CPMS API");
-            await _client.PutAsJsonAsync($"{ApiPath}/StatusNotification", statusNotificationRequest);
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-
-    public async Task<StopTransactionResponse> StopTransaction(StopTransactionCpmsRequest cpmsRequest)
-    {
-        try
-        {
-            _loggerService.Info($"Sending request {cpmsRequest} to CPMS API");
-            var stopTransactionResponse = await _client.PostAsJsonAsync($"{ApiPath}/StopTransaction", cpmsRequest);
-            _loggerService.Info($"Received response {await stopTransactionResponse.Content.ReadAsStringAsync()} from CPMS API");
-            return await stopTransactionResponse.Content.ReadFromJsonAsync<StopTransactionResponse>() ?? throw new InvalidOperationException();
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-
-    public async Task ConnectorUnlocked(ConnectorUnlockedResponse response)
-    {
-        try
-        {
-            _loggerService.Info($"Sending request {response} to CPMS API");
-            await _client.PostAsJsonAsync($"{ApiPath}/ConnectorUnlocked", response);
-        }
-        catch (Exception ex)
-        {
-            _loggerService.Error(ex.Message);
-            throw;
-        }
-    }
-}
-
+/// <summary>HTTP client for the API's ProxyController. Known gap: no retries, no circuit breaker, 120 s timeout.</summary>
 public interface ICpmsClient
 {
-    Task<AuthorizeChargerResponse> Authorize(AuthorizeChargerRequest authorizeChargerRequest);
-    Task BootNotification(BootNotificationRequest bootNotificationRequest);
-    Task ChargingProfileCleared(ClearChargingProfileResponse response);
-    Task MeterValues(MeterValuesRequest meterValuesRequest);
-    Task Reset(ResetChargerResponse resetResponse);
-    Task ChargingProfileSet(SetChargingProfileResponse setChargingProfileResponse);
-    Task<StartTransactionResponse> StartTransaction(StartTransactionChargerResponse response);
-    Task StatusNotification(StatusNotificationRequest statusNotificationRequest);
-    Task<StopTransactionResponse> StopTransaction(StopTransactionCpmsRequest cpmsRequest);
-    Task ConnectorUnlocked(ConnectorUnlockedResponse response);
+    Task<AuthorizeChargerResponse> Authorize(AuthorizeChargerRequest request);
+
+    /// <summary>True when the API knows the charger; false when it is not registered.</summary>
+    Task<bool> BootNotification(BootNotificationRequest request);
+
+    Task<StartTransactionResponse> StartTransaction(StartTransactionChargerResponse request);
+    Task<StopTransactionResponse> StopTransaction(StopTransactionCpmsRequest request);
+    Task MeterValues(MeterValuesRequest request);
+    Task StatusNotification(StatusNotificationRequest request);
+}
+
+public class CpmsClient : ICpmsClient
+{
+    private const string ApiPath = "api/Proxy";
+
+    private readonly HttpClient _client;
+    private readonly ILoggerService _logger;
+
+    public CpmsClient(HttpClient client, ILoggerService logger)
+    {
+        _client = client;
+        _logger = logger;
+    }
+
+    public async Task<AuthorizeChargerResponse> Authorize(AuthorizeChargerRequest request)
+    {
+        using var response = await Send(HttpMethod.Post, "Authorize", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<AuthorizeChargerResponse>()
+               ?? throw new InvalidOperationException("Empty Authorize response");
+    }
+
+    public async Task<bool> BootNotification(BootNotificationRequest request)
+    {
+        using var response = await Send(HttpMethod.Put, "BootNotification", request);
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+            return false;
+
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    public async Task<StartTransactionResponse> StartTransaction(StartTransactionChargerResponse request)
+    {
+        using var response = await Send(HttpMethod.Post, "StartTransaction", request);
+
+        // The API answers 400 when the tag is invalid, blocked or expired.
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+            return new StartTransactionResponse { TransactionId = 0, IdTagInfo = Invalid() };
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<StartTransactionResponse>()
+               ?? throw new InvalidOperationException("Empty StartTransaction response");
+    }
+
+    public async Task<StopTransactionResponse> StopTransaction(StopTransactionCpmsRequest request)
+    {
+        using var response = await Send(HttpMethod.Post, "StopTransaction", request);
+
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+            return new StopTransactionResponse { IdTagInfo = Invalid() };
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<StopTransactionResponse>()
+               ?? throw new InvalidOperationException("Empty StopTransaction response");
+    }
+
+    public async Task MeterValues(MeterValuesRequest request)
+    {
+        using var response = await Send(HttpMethod.Put, "MeterValues", request);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task StatusNotification(StatusNotificationRequest request)
+    {
+        using var response = await Send(HttpMethod.Put, "StatusNotification", request);
+        response.EnsureSuccessStatusCode();
+    }
+
+    private async Task<HttpResponseMessage> Send<T>(HttpMethod method, string action, T body)
+    {
+        using var httpRequest = new HttpRequestMessage(method, $"{ApiPath}/{action}")
+        {
+            Content = JsonContent.Create(body)
+        };
+
+        var response = await _client.SendAsync(httpRequest);
+        _logger.Info($"CPMS API {action} => {(int)response.StatusCode}");
+        return response;
+    }
+
+    private static IdTagInfo Invalid() => new() { Status = AuthorizationStatus.Invalid };
 }

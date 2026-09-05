@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using CPMS.Core.Models.Requests;
+using System.Globalization;
 using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
@@ -11,138 +10,102 @@ public partial class ControllerOcpp16
 {
     private async Task<string?> HandleMeterValues(OCPPMessage msgIn, OCPPMessage msgOut)
     {
-        string? errorCode = null;
-
         try
         {
-            Proxy.OCPP_1._6.MeterValuesRequest meterValueRequest = JsonConvert.DeserializeObject<Proxy.OCPP_1._6.MeterValuesRequest>(msgIn.JsonPayload) 
-                                                                   ?? throw new InvalidOperationException();
-            
-            if (ChargePointStatus == null)
-            {
-                errorCode = ErrorCodes.GenericError;
-                Logger.Error($"MeterValues => Unknown charge station");
-                return errorCode;
-            }
-                
-            MeterValuesRequest meterValues = ProcessMeterValues(meterValueRequest);
+            var request = JsonConvert.DeserializeObject<Proxy.OCPP_1._6.MeterValuesRequest>(msgIn.JsonPayload)
+                          ?? throw new InvalidOperationException("Empty MeterValues payload");
+
+            var meterValues = Summarise(request);
             meterValues.OcppChargerId = ChargePointStatus.Id;
             meterValues.Protocol = ChargePointStatus.Protocol;
-            meterValues.TransactionId = meterValueRequest.TransactionId;
-            
+            meterValues.TransactionId = request.TransactionId;
+
             await _cpmsClient.MeterValues(meterValues);
+
             msgOut.JsonPayload = JsonConvert.SerializeObject(new Proxy.OCPP_1._6.MeterValuesResponse());
+            return null;
         }
         catch (Exception exp)
         {
-            Logger.Error($"MeterValues => Exception: {exp}", exp);
-            errorCode = ErrorCodes.InternalError;
+            Logger.Error($"MeterValues => Exception: {exp.Message}", exp);
+            return ErrorCodes.InternalError;
         }
-
-        return errorCode;
     }
 
-    private MeterValuesRequest ProcessMeterValues(Proxy.OCPP_1._6.MeterValuesRequest meterValueRequest)
+    /// <summary>Collapses the sampled values of one MeterValues.req into power (kW), energy (kWh) and SoC.</summary>
+    private MeterValuesRequest Summarise(Proxy.OCPP_1._6.MeterValuesRequest request)
     {
-        double totalPowerKW  = 0;
-        double totalEnergyKWh  = 0;
-        DateTimeOffset? meterTime = null;
+        double totalPowerKw = 0;
+        double totalEnergyKwh = 0;
         double stateOfCharge = 0;
+        DateTimeOffset? meterTime = null;
 
-        foreach (MeterValue meterValue in meterValueRequest.MeterValue)
+        foreach (var meterValue in request.MeterValue)
         {
-            foreach (SampledValue sampleValue in meterValue.SampledValue)
+            foreach (var sample in meterValue.SampledValue)
             {
-                Logger.Info($"MeterValues => Context={sampleValue.Context} / Format={sampleValue.Format} / Value={sampleValue.Value} / Unit={sampleValue.Unit} / Location={sampleValue.Location} / Measurand={sampleValue.Measurand} / Phase={sampleValue.Phase}");
-                switch (sampleValue.Measurand)
+                Logger.Debug($"MeterValues => Measurand={sample.Measurand} Value={sample.Value} Unit={sample.Unit} Context={sample.Context} Location={sample.Location} Phase={sample.Phase}");
+
+                switch (sample.Measurand)
                 {
                     case SampledValueMeasurand.Power_Active_Import:
-                        totalPowerKW += ProcessPowerActiveImport(sampleValue);
+                        totalPowerKw += ToKilowatts(sample);
                         break;
                     case SampledValueMeasurand.Energy_Active_Import_Register:
-                        totalEnergyKWh += ProcessEnergyActiveImportRegister(sampleValue);
+                    case null: // OCPP default measurand
+                        totalEnergyKwh += ToKilowattHours(sample);
                         meterTime = meterValue.Timestamp;
                         break;
                     case SampledValueMeasurand.SoC:
-                        stateOfCharge = ProcessStateOfCharge(sampleValue);
-                        break;
-                    case null:
-                        totalEnergyKWh  += ProcessEnergyActiveImportRegister(sampleValue);
-                        meterTime = meterValue.Timestamp;
+                        stateOfCharge = ParseOrLog(sample, "SoC");
                         break;
                 }
             }
         }
 
-        MeterValuesRequest meterValueProxy = new MeterValuesRequest
+        return new MeterValuesRequest
         {
-            EnergyConsumed = totalEnergyKWh,
-            CurrentPower = totalPowerKW,
+            CurrentPower = totalPowerKw,
+            EnergyConsumed = totalEnergyKwh,
             StateOfCharge = stateOfCharge,
             MeterTime = meterTime
         };
-
-        return meterValueProxy;
     }
 
-    private double ProcessPowerActiveImport(SampledValue sampleValue)
+    private double ToKilowatts(SampledValue sample)
     {
-        if (!double.TryParse(sampleValue.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double currentChargeKW))
+        var value = ParseOrLog(sample, "power");
+        return sample.Unit switch
         {
-            return -1;
-        }
-
-        if (sampleValue.Unit == SampledValueUnit.W ||
-            sampleValue.Unit == SampledValueUnit.VA ||
-            sampleValue.Unit == SampledValueUnit.Var ||
-            sampleValue.Unit == null)
-        {
-            return currentChargeKW / 1000; // convert W => kW
-        }
-
-        if (sampleValue.Unit == SampledValueUnit.KW ||
-            sampleValue.Unit == SampledValueUnit.KVA ||
-            sampleValue.Unit == SampledValueUnit.Kvar)
-        {
-            return currentChargeKW; // already kW
-        }
-
-        return -1;
+            SampledValueUnit.W or SampledValueUnit.VA or SampledValueUnit.Var or null => value / 1000,
+            SampledValueUnit.KW or SampledValueUnit.KVA or SampledValueUnit.Kvar => value,
+            _ => LogUnexpectedUnit(sample)
+        };
     }
 
-    private double ProcessEnergyActiveImportRegister(SampledValue sampleValue)
+    private double ToKilowattHours(SampledValue sample)
     {
-        if (!double.TryParse(sampleValue.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double meterKWH))
+        var value = ParseOrLog(sample, "energy");
+        return sample.Unit switch
         {
-            Logger.Warning($"MeterValues => Value: invalid value '{sampleValue.Value}' (Unit={sampleValue.Unit})");
-            return -1;
-        }
-
-        if (sampleValue.Unit == SampledValueUnit.Wh ||
-            sampleValue.Unit == SampledValueUnit.Varh ||
-            sampleValue.Unit == null)
-        {
-            return meterKWH / 1000; // convert Wh => kWh
-        }
-
-        if (sampleValue.Unit == SampledValueUnit.KWh ||
-            sampleValue.Unit == SampledValueUnit.Kvarh)
-        {
-            return meterKWH; // already kWh
-        }
-
-        Logger.Warning($"MeterValues => Value: unexpected unit: '{sampleValue.Unit}' (Value={sampleValue.Value})");
-        return -1;
+            SampledValueUnit.Wh or SampledValueUnit.Varh or null => value / 1000,
+            SampledValueUnit.KWh or SampledValueUnit.Kvarh => value,
+            _ => LogUnexpectedUnit(sample)
+        };
     }
 
-    private double ProcessStateOfCharge(SampledValue sampleValue)
+    private double ParseOrLog(SampledValue sample, string what)
     {
-        if (!double.TryParse(sampleValue.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double stateOfCharge))
-        {
-            Logger.Error($"MeterValues => invalid value '{sampleValue.Value}' (SoC)");
-            return -1;
-        }
+        if (double.TryParse(sample.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+            return value;
 
-        return stateOfCharge;
+        Logger.Warning($"MeterValues => invalid {what} value '{sample.Value}' (Unit={sample.Unit})");
+        return 0;
+    }
+
+    private double LogUnexpectedUnit(SampledValue sample)
+    {
+        Logger.Warning($"MeterValues => unexpected unit '{sample.Unit}' for measurand {sample.Measurand} (Value={sample.Value})");
+        return 0;
     }
 }
