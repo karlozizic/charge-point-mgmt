@@ -1,27 +1,39 @@
+# Local infrastructure. Credentials come from .env (see .env.example) so that
+# compose and the application connection string share one source of truth.
+#
+# The gateway scale-out work later extends this into the full local stack
+# (API and gateway replicas, frontend, simulator).
 services:
   postgres:
     image: postgres:16
     container_name: cpms-postgres
     environment:
-      POSTGRES_DB: cpms
-      POSTGRES_USER: cpmsuser
-      POSTGRES_PASSWORD: StrongP@ssw0rd
+      POSTGRES_DB: ${POSTGRES_DB:-cpms}
+      POSTGRES_USER: ${POSTGRES_USER:-cpmsuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    # Downstream services wait on this rather than racing the container start.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cpmsuser} -d ${POSTGRES_DB:-cpms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: cpms-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@cpms.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?set PGADMIN_PASSWORD in .env}
     ports:
       - "5050:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
