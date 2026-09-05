@@ -204,3 +204,11 @@ dist-ssr
 *.sln
 *.sw?
 wwwroot/assets
+
+# Secrets and local configuration
+# Real values live in .env (never committed) — see .env.example for the template.
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+*.pfx
