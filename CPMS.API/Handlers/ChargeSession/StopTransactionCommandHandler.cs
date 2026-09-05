@@ -1,5 +1,4 @@
 using CPMS.API.Repositories;
-using CPMS.Core.Models.Enums;
 using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Responses;
 using MediatR;

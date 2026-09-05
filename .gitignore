@@ -203,7 +203,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-wwwroot/assets
+CPMS.API/wwwroot/
 
 # Secrets and local configuration
 # Real values live in .env (never committed) — see .env.example for the template.

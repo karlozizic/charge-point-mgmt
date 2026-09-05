@@ -1,4 +1,3 @@
-using CPMS.Core.Models.Enums;
 using CPMS.Core.Models.Responses;
 
 namespace CPMS.Core.Models.OCPP_1._6;

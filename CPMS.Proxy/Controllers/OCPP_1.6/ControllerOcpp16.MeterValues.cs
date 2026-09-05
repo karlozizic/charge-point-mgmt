@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using CPMS.Core.Models.Requests;
 using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
@@ -31,6 +31,7 @@ public partial class ControllerOcpp16
             meterValues.TransactionId = meterValueRequest.TransactionId;
             
             await _cpmsClient.MeterValues(meterValues);
+            msgOut.JsonPayload = JsonConvert.SerializeObject(new Proxy.OCPP_1._6.MeterValuesResponse());
         }
         catch (Exception exp)
         {
