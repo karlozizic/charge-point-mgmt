@@ -1,4 +1,5 @@
-using System.Text;
+﻿using System.Text;
+using CPMS.API.Exceptions;
 using CPMS.API.Projections;
 using Marten;
 using MediatR;
@@ -25,7 +26,7 @@ public class ExportChargeSessionToCsvQueryHandler : IRequestHandler<ExportCharge
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
 
         if (session == null)
-            throw new InvalidOperationException($"Session with ID {request.SessionId} not found.");
+            throw new NotFoundException($"Session with ID {request.SessionId} not found.");
 
         return GenerateCsvReport(session);
     }

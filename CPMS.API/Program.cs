@@ -1,3 +1,4 @@
+using CPMS.API.Infrastructure;
 using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.API.Services;
@@ -11,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options =>
@@ -52,6 +55,8 @@ builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddHealthChecks().AddNpgSql(connectionString);
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 app.UseSwagger();
 app.UseSwaggerUI(c => {

@@ -20,108 +20,63 @@ public class ChargeTagsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<ChargeTagReadModel>>> GetAll()
     {
-        var tags = await _mediator.Send(new GetAllChargeTagsQuery());
-        return Ok(tags);
+        return Ok(await _mediator.Send(new GetAllChargeTagsQuery()));
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<ChargeTagReadModel>> GetById(Guid id)
     {
         var tag = await _mediator.Send(new GetChargeTagByIdQuery { Id = id });
-        
-        if (tag == null)
-            return NotFound();
-            
-        return Ok(tag);
+        return tag == null ? NotFound() : Ok(tag);
     }
 
     [HttpGet("byTagId/{tagId}")]
     public async Task<ActionResult<ChargeTagReadModel>> GetByTagId(string tagId)
     {
         var tag = await _mediator.Send(new GetChargeTagByTagIdQuery { TagId = tagId });
-        
-        if (tag == null)
-            return NotFound();
-            
-        return Ok(tag);
+        return tag == null ? NotFound() : Ok(tag);
     }
 
     [HttpPost]
     public async Task<ActionResult<Guid>> Create(CreateChargeTagCommand command)
     {
-        try
-        {
-            var id = await _mediator.Send(command);
-            return CreatedAtAction(nameof(GetById), new { id }, id);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
+        var id = await _mediator.Send(command);
+        return CreatedAtAction(nameof(GetById), new { id }, id);
     }
 
     [HttpPut("{id}")]
     public async Task<ActionResult> Update(Guid id, UpdateChargeTagCommand command)
     {
-        try
-        {
-            command.Id = id;
-            await _mediator.Send(command);
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(ex.Message);
-        }
+        command.Id = id;
+        await _mediator.Send(command);
+        return NoContent();
     }
 
     [HttpPost("{id}/block")]
     public async Task<ActionResult> Block(Guid id)
     {
-        try
-        {
-            await _mediator.Send(new BlockChargeTagCommand { Id = id });
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(ex.Message);
-        }
+        await _mediator.Send(new BlockChargeTagCommand { Id = id });
+        return NoContent();
     }
 
     [HttpPost("{id}/unblock")]
     public async Task<ActionResult> Unblock(Guid id)
     {
-        try
-        {
-            await _mediator.Send(new UnblockChargeTagCommand { Id = id });
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(ex.Message);
-        }
+        await _mediator.Send(new UnblockChargeTagCommand { Id = id });
+        return NoContent();
     }
 
     [HttpPut("{id}/expiry")]
     public async Task<ActionResult> UpdateExpiry(Guid id, UpdateChargeTagExpiryCommand command)
     {
-        try
-        {
-            command.Id = id;
-            await _mediator.Send(command);
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(ex.Message);
-        }
+        command.Id = id;
+        await _mediator.Send(command);
+        return NoContent();
     }
-    
+
     [HttpPost("authorize")]
     public async Task<ActionResult<bool>> AuthorizeTag(AuthorizeTagCommand command)
     {
-        var isAuthorized = await _mediator.Send(command);
-        return Ok(isAuthorized);
+        return Ok(await _mediator.Send(command));
     }
 }
