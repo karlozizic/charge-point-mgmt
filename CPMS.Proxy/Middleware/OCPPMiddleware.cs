@@ -45,8 +45,9 @@ public class OcppMiddleware
             return;
         }
 
-        var chargePointId = remaining.Value?.Trim('/');
-        if (string.IsNullOrEmpty(chargePointId) || chargePointId.Contains('/'))
+        // The charge point id is the last path segment, so nested URLs like /OCPP/site1/CP-001 work.
+        var chargePointId = remaining.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        if (string.IsNullOrEmpty(chargePointId))
         {
             _logger.Error($"OCPPMiddleware => Invalid charge point path: {context.Request.Path}");
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -135,6 +136,9 @@ public class OcppMiddleware
     {
         _logger.Debug($"OCPPMiddleware => Received from {chargePoint.Id}: {text}");
 
+        if (text == "ping")
+            return; // some chargers send a text ping; nothing to answer
+
         var match = MessageRegExp.Match(text);
         if (!match.Success)
         {
@@ -209,11 +213,19 @@ public class OcppMiddleware
 
         _logger.Debug($"OCPPMiddleware => Sending to {chargePoint.Id}: {text}");
 
-        await chargePoint.WebSocket.SendAsync(
-            Encoding.UTF8.GetBytes(text),
-            WebSocketMessageType.Text,
-            endOfMessage: true,
-            CancellationToken.None);
+        try
+        {
+            await chargePoint.WebSocket.SendAsync(
+                Encoding.UTF8.GetBytes(text),
+                WebSocketMessageType.Text,
+                endOfMessage: true,
+                CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            // The socket can die between receiving the CALL and answering it; the read loop ends on its own.
+            _logger.Error($"OCPPMiddleware => Error sending to {chargePoint.Id}: {ex.Message}");
+        }
     }
 
     /// <summary>

@@ -38,11 +38,12 @@ public class MeterValuesCommandHandler : IRequestHandler<MeterValuesCommand>
             return;
         }
 
+        // Server time, as before. The charger's own MeterTime is not trusted for ordering yet.
         chargeSession.AddMeterValue(
             request.CurrentPower,
             request.EnergyConsumed,
             request.StateOfCharge,
-            (request.MeterTime ?? DateTimeOffset.UtcNow).UtcDateTime);
+            DateTime.UtcNow);
 
         await _chargeSessions.SaveAsync(chargeSession, cancellationToken);
     }

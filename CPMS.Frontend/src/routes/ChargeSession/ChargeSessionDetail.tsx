@@ -56,7 +56,7 @@ function ChargeSessionDetail() {
                             <div className="energy-main">{formatEnergy(session.energyDeliveredKWh)} kWh</div>
                             <div className="energy-details">
                                 <div>Start: {session.startMeterValue.toFixed(2)} Wh</div>
-                                {session.stopMeterValue !== undefined && (
+                                {session.stopMeterValue != null && (
                                     <div>Stop: {session.stopMeterValue.toFixed(2)} Wh</div>
                                 )}
                             </div>

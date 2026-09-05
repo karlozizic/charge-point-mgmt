@@ -1,4 +1,4 @@
-using CPMS.Core.Models.OCPP_1._6;
+﻿using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
@@ -61,7 +61,7 @@ public partial class ControllerOcpp16
         catch (Exception exp)
         {
             Logger.Error($"StartTransaction exception", exp);
-            errorCode = ErrorCodes.FormationViolation;
+            errorCode = ErrorCodes.InternalError;
         }
 
         return errorCode;

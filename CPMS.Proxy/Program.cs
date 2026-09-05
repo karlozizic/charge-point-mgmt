@@ -19,11 +19,12 @@ builder.Logging.AddFilter("CPMS", LogLevel.Information);
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ILoggerService, LoggerService>();
 builder.Services.AddSingleton<IAuthorizationCache, AuthorizationCache>();
+var apiBaseUrl = builder.Configuration["CpmsApi:BaseUrl"]
+    ?? throw new InvalidOperationException("CpmsApi:BaseUrl is not configured.");
+
 builder.Services.AddHttpClient<ICpmsClient, CpmsClient>(client =>
 {
-    var baseUrl = builder.Configuration["CpmsApi:BaseUrl"]
-        ?? throw new InvalidOperationException("CpmsApi:BaseUrl is not configured.");
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(120);
 });
 

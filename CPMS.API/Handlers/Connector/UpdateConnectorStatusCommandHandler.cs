@@ -35,6 +35,9 @@ public class UpdateConnectorStatusCommandHandler : IRequestHandler<UpdateConnect
 
     public async Task Handle(UpdateConnectorStatusCommand command, CancellationToken cancellationToken)
     {
+        if (command.ConnectorId <= 0)
+            throw new ArgumentException("Connector id must be positive; connector 0 is the charge point itself.", nameof(command));
+
         var readModel = await _querySession.Query<ChargePointReadModel>()
             .FirstOrDefaultAsync(cp => cp.OcppChargerId == command.OcppChargerId, cancellationToken);
         var chargePoint = readModel == null ? null : await _chargePoints.LoadAsync(readModel.Id, cancellationToken);
