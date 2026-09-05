@@ -1,5 +1,7 @@
-# Local infrastructure. Credentials come from .env (see .env.example) so that
-# compose and the application connection string share one source of truth.
+# Local infrastructure. The defaults match CPMS.API/appsettings.Development.json, so a fresh
+# clone runs with no .env at all. Override any of them in .env (see .env.example) — but if you
+# change the password or the port, set ConnectionStrings__MartenDb there as well, or the API
+# keeps using the connection string from appsettings.Development.json and cannot log in.
 #
 # The gateway scale-out work later extends this into the full local stack
 # (API and gateway replicas, frontend, simulator).
@@ -10,9 +12,10 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-cpms}
       POSTGRES_USER: ${POSTGRES_USER:-cpmsuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cpms_local_dev}
     ports:
-      - "5432:5432"
+      # Set POSTGRES_PORT in .env when something else already holds 5432.
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     # Downstream services wait on this rather than racing the container start.
@@ -28,9 +31,9 @@ services:
     container_name: cpms-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@cpms.local}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?set PGADMIN_PASSWORD in .env}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-cpms_local_dev}
     ports:
-      - "5050:80"
+      - "${PGADMIN_PORT:-5050}:80"
     depends_on:
       postgres:
         condition: service_healthy
