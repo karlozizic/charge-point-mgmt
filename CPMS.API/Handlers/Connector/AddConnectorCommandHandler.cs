@@ -1,5 +1,7 @@
+using CPMS.API.Exceptions;
+using CPMS.API.Projections;
 using CPMS.API.Repositories;
-using CPMS.BuildingBlocks.Infrastructure.Logger;
+using Marten;
 using MediatR;
 
 namespace CPMS.API.Handlers.Connector;
@@ -9,36 +11,31 @@ public class AddConnectorCommand : IRequest
     public string OcppChargerId { get; set; }
     public string Name { get; set; }
 }
-    
+
 public class AddConnectorCommandHandler : IRequestHandler<AddConnectorCommand>
 {
-    private readonly IChargePointRepository _repository;
-    private readonly ILoggerService _logger;
-        
-    public AddConnectorCommandHandler(IChargePointRepository repository,
-        ILoggerService logger)
+    private readonly IAggregateRepository<Entities.ChargePoint> _chargePoints;
+    private readonly IQuerySession _querySession;
+
+    public AddConnectorCommandHandler(
+        IAggregateRepository<Entities.ChargePoint> chargePoints,
+        IQuerySession querySession)
     {
-        _repository = repository;
-        _logger = logger;
+        _chargePoints = chargePoints;
+        _querySession = querySession;
     }
-        
+
     public async Task Handle(AddConnectorCommand command, CancellationToken cancellationToken)
     {
-        var chargePointId = command.OcppChargerId;
-        var chargePoint = await _repository.GetByOcppChargerIdAsync(chargePointId);
+        var readModel = await _querySession.Query<ChargePointReadModel>()
+            .FirstOrDefaultAsync(cp => cp.OcppChargerId == command.OcppChargerId, cancellationToken);
+        var chargePoint = readModel == null ? null : await _chargePoints.LoadAsync(readModel.Id, cancellationToken);
 
         if (chargePoint == null)
-        {
-            _logger.Info($"Charge point with id {chargePointId} not found");
-            return;
-        }
+            throw new NotFoundException($"Charge point {command.OcppChargerId} not found");
 
-        int connectorId = chargePoint.Connectors.Count > 0 
-            ? chargePoint.Connectors.Max(c => c.Id) + 1 
-            : 1;
-        
-        chargePoint.AddConnector(connectorId, command.Name);
-            
-        await _repository.UpdateAsync(chargePoint);
+        chargePoint.AddConnector(chargePoint.NextConnectorId(), command.Name);
+
+        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
     }
 }

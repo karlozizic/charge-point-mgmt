@@ -1,4 +1,5 @@
 using CPMS.API.Projections;
+using CPMS.API.Repositories;
 using Marten;
 using MediatR;
 
@@ -12,36 +13,28 @@ public class CreateChargeTagCommand : IRequest<Guid>
 
 public class CreateChargeTagCommandHandler : IRequestHandler<CreateChargeTagCommand, Guid>
 {
-    private readonly IDocumentSession _documentSession;
+    private readonly IAggregateRepository<Entities.ChargeTag> _chargeTags;
+    private readonly IQuerySession _querySession;
 
-    public CreateChargeTagCommandHandler(IDocumentSession documentSession)
+    public CreateChargeTagCommandHandler(
+        IAggregateRepository<Entities.ChargeTag> chargeTags,
+        IQuerySession querySession)
     {
-        _documentSession = documentSession;
+        _chargeTags = chargeTags;
+        _querySession = querySession;
     }
 
     public async Task<Guid> Handle(CreateChargeTagCommand request, CancellationToken cancellationToken)
     {
-        var existingTag = await _documentSession
+        var exists = await _querySession
             .Query<ChargeTagReadModel>()
-            .FirstOrDefaultAsync(t => t.TagId == request.TagId, cancellationToken);
-
-        if (existingTag != null)
+            .AnyAsync(t => t.TagId == request.TagId, cancellationToken);
+        if (exists)
             throw new InvalidOperationException($"Tag with ID {request.TagId} already exists.");
 
-        var tagId = Guid.NewGuid();
-        var chargeTag = new Entities.ChargeTag(
-            tagId,
-            request.TagId,
-            request.ExpiryDate
-        );
+        var chargeTag = new Entities.ChargeTag(Guid.NewGuid(), request.TagId, request.ExpiryDate);
 
-        foreach (var @event in chargeTag.DomainEvents)
-        {
-            _documentSession.Events.Append(tagId, @event);
-        }
-
-        await _documentSession.SaveChangesAsync(cancellationToken);
-
-        return tagId;
+        await _chargeTags.SaveAsync(chargeTag, cancellationToken);
+        return chargeTag.Id;
     }
 }

@@ -17,19 +17,17 @@ public class CreateLocationCommand : IRequest<Guid>
 
 public class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, Guid>
 {
-    private readonly ILocationRepository _locationRepository;
+    private readonly IAggregateRepository<Entities.Location> _locations;
 
-    public CreateLocationCommandHandler(ILocationRepository locationRepository)
+    public CreateLocationCommandHandler(IAggregateRepository<Entities.Location> locations)
     {
-        _locationRepository = locationRepository;
+        _locations = locations;
     }
-    
+
     public async Task<Guid> Handle(CreateLocationCommand command, CancellationToken cancellationToken)
     {
-        var locationId = Guid.NewGuid();
-
         var location = new Entities.Location(
-            locationId,
+            Guid.NewGuid(),
             command.Name,
             command.Address,
             command.City,
@@ -39,7 +37,7 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
             command.Longitude,
             command.Description);
 
-        await _locationRepository.AddAsync(location);
-        return locationId;
+        await _locations.SaveAsync(location, cancellationToken);
+        return location.Id;
     }
 }

@@ -12,27 +12,24 @@ public class CreateChargePointCommand : IRequest<Guid>
 
 public class CreateChargePointCommandHandler : IRequestHandler<CreateChargePointCommand, Guid>
 {
-    private readonly IChargePointRepository _repository;
-        
-    public CreateChargePointCommandHandler(IChargePointRepository repository)
+    private readonly IAggregateRepository<Entities.ChargePoint> _chargePoints;
+
+    public CreateChargePointCommandHandler(IAggregateRepository<Entities.ChargePoint> chargePoints)
     {
-        _repository = repository;
+        _chargePoints = chargePoints;
     }
-        
+
     public async Task<Guid> Handle(CreateChargePointCommand command, CancellationToken cancellationToken)
     {
-        var chargePointId = Guid.NewGuid();
-        var locationId = command.LocationId;
-            
         var chargePoint = new Entities.ChargePoint(
-            chargePointId, 
-            command.OcppChargerId, 
-            locationId, 
+            Guid.NewGuid(),
+            command.OcppChargerId,
+            command.LocationId,
             command.MaxPower,
             null);
-        
-        await _repository.AddAsync(chargePoint);
 
-        return chargePointId;
+        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
+
+        return chargePoint.Id;
     }
 }

@@ -1,7 +1,6 @@
 using CPMS.API.Events.ChargePoint;
 using CPMS.API.Events.Connector;
 using Marten.Events.Aggregation;
-using ConnectorStatusChangedEvent = CPMS.API.Events.ChargePoint.ConnectorStatusChangedEvent;
 
 namespace CPMS.API.Projections;
 

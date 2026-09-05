@@ -1,5 +1,7 @@
+using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.BuildingBlocks.Infrastructure.Logger;
+using Marten;
 using MediatR;
 
 namespace CPMS.API.Handlers.Connector;
@@ -14,55 +16,44 @@ public class UpdateConnectorStatusCommand : IRequest
     public string Info { get; set; }
     public DateTime? Timestamp { get; set; }
 }
-    
+
 public class UpdateConnectorStatusCommandHandler : IRequestHandler<UpdateConnectorStatusCommand>
 {
-    private readonly IChargePointRepository _chargePointRepository;
+    private readonly IAggregateRepository<Entities.ChargePoint> _chargePoints;
+    private readonly IQuerySession _querySession;
     private readonly ILoggerService _logger;
-        
-    public UpdateConnectorStatusCommandHandler(IChargePointRepository chargePointRepository,
+
+    public UpdateConnectorStatusCommandHandler(
+        IAggregateRepository<Entities.ChargePoint> chargePoints,
+        IQuerySession querySession,
         ILoggerService logger)
     {
-        _chargePointRepository = chargePointRepository;
+        _chargePoints = chargePoints;
+        _querySession = querySession;
         _logger = logger;
     }
 
     public async Task Handle(UpdateConnectorStatusCommand command, CancellationToken cancellationToken)
     {
-        try
+        var readModel = await _querySession.Query<ChargePointReadModel>()
+            .FirstOrDefaultAsync(cp => cp.OcppChargerId == command.OcppChargerId, cancellationToken);
+        var chargePoint = readModel == null ? null : await _chargePoints.LoadAsync(readModel.Id, cancellationToken);
+
+        if (chargePoint == null)
         {
-            var chargePoint = await _chargePointRepository.GetByOcppChargerIdAsync(command.OcppChargerId);
-
-            if (chargePoint == null)
-            {
-                _logger.Warning($"Received status notification for unknown charge point: {command.ChargePointId}");
-                return;
-            }
-
-            var connector = chargePoint.Connectors.FirstOrDefault(c => c.Id == command.ConnectorId);
-
-            if (connector == null)
-            {
-                int connectorId = chargePoint.Connectors.Count > 0 
-                    ? chargePoint.Connectors.Max(c => c.Id) + 1 
-                    : 1;
-                
-                chargePoint.AddConnector(connectorId, $"Connector {command.ConnectorId}");
-
-                connector = chargePoint.Connectors.FirstOrDefault(c => c.Id == command.ConnectorId);
-            }
-
-            chargePoint.UpdateConnectorStatus(connector.Id, command.Status);
-
-            if (!string.IsNullOrEmpty(command.ErrorCode) && command.ErrorCode != "NoError")
-                chargePoint.LogConnectorError(connector.Id, command.ErrorCode, command.Info);
-
-            await _chargePointRepository.UpdateAsync(chargePoint);
+            _logger.Warning($"Received status notification for unknown charge point: {command.OcppChargerId}");
+            return;
         }
-        catch (Exception ex)
-        {
-            _logger.Error($"Error updating connector status for {command.ChargePointId}:{command.ConnectorId}");
-            throw;
-        }
+
+        // A charger may report a connector the operator never registered; create it on first sight.
+        if (chargePoint.Connectors.All(c => c.Id != command.ConnectorId))
+            chargePoint.AddConnector(command.ConnectorId, $"Connector {command.ConnectorId}");
+
+        chargePoint.UpdateConnectorStatus(command.ConnectorId, command.Status);
+
+        if (!string.IsNullOrEmpty(command.ErrorCode) && command.ErrorCode != "NoError")
+            chargePoint.LogConnectorError(command.ConnectorId, command.ErrorCode, command.Info);
+
+        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
     }
 }

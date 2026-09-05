@@ -8,7 +8,7 @@ public class SessionBillingProjection : SingleStreamProjection<SessionBillingRea
     public SessionBillingProjection()
     {
         ProjectEvent<SessionBillingCalculatedEvent>((model, @event) => {
-            model.Id = Guid.NewGuid();
+            model.Id = @event.BillingId;
             model.SessionId = @event.SessionId;
             model.PricingGroupId = @event.PricingGroupId;
             model.BaseAmount = @event.BaseAmount;
@@ -19,19 +19,19 @@ public class SessionBillingProjection : SingleStreamProjection<SessionBillingRea
             model.CreatedAt = @event.CalculatedAt;
             return model;
         });
-        
+
         ProjectEvent<PaymentIntentCreatedEvent>((model, @event) => {
             model.StripePaymentIntentId = @event.StripePaymentIntentId;
             model.PaymentStatus = @event.Status;
             return model;
         });
-        
+
         ProjectEvent<StripeSessionCreatedEvent>((model, @event) => {
             model.StripeSessionId = @event.StripeSessionId;
             model.PaymentStatus = "pending_payment";
             return model;
         });
-        
+
         ProjectEvent<PaymentCompletedEvent>((model, @event) => {
             model.PaymentStatus = "succeeded";
             model.PaidAt = @event.PaidAt;

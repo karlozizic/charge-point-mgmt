@@ -1,5 +1,7 @@
 using CPMS.API.Exceptions;
+using CPMS.API.Projections;
 using CPMS.API.Repositories;
+using Marten;
 using MediatR;
 
 namespace CPMS.API.Handlers.Location;
@@ -19,22 +21,26 @@ public class UpdateLocationCommand : IRequest
 
 public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationCommand>
 {
-    private readonly ILocationRepository _repository;
+    private readonly IAggregateRepository<Entities.Location> _locations;
+    private readonly IQuerySession _querySession;
 
-    public UpdateLocationCommandHandler(ILocationRepository repository)
+    public UpdateLocationCommandHandler(
+        IAggregateRepository<Entities.Location> locations,
+        IQuerySession querySession)
     {
-        _repository = repository;
+        _locations = locations;
+        _querySession = querySession;
     }
 
     public async Task Handle(UpdateLocationCommand command, CancellationToken cancellationToken)
     {
-        var location = await _repository.GetByIdAsync(command.Id);
-        
+        var location = await _locations.LoadAsync(command.Id, cancellationToken);
         if (location == null)
             throw new NotFoundException($"Location with ID {command.Id} does not exist.");
-        
-        var existingLocation = await _repository.GetByNameAsync(command.Name);
-        if (existingLocation != null && existingLocation.Id != command.Id)
+
+        var nameTaken = await _querySession.Query<LocationReadModel>()
+            .AnyAsync(l => l.Name == command.Name && l.Id != command.Id, cancellationToken);
+        if (nameTaken)
             throw new InvalidOperationException($"Another location with name '{command.Name}' already exists");
 
         location.UpdateDetails(
@@ -47,6 +53,6 @@ public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationComman
             command.Longitude,
             command.Description);
 
-        await _repository.UpdateAsync(location);
+        await _locations.SaveAsync(location, cancellationToken);
     }
 }

@@ -13,25 +13,23 @@ public class CreatePricingGroupCommand : IRequest<Guid>
 
 public class CreatePricingGroupCommandHandler : IRequestHandler<CreatePricingGroupCommand, Guid>
 {
-    private readonly IPricingGroupRepository _repository;
-    
-    public CreatePricingGroupCommandHandler(IPricingGroupRepository repository)
+    private readonly IAggregateRepository<Entities.PricingGroup> _pricingGroups;
+
+    public CreatePricingGroupCommandHandler(IAggregateRepository<Entities.PricingGroup> pricingGroups)
     {
-        _repository = repository;
+        _pricingGroups = pricingGroups;
     }
-    
+
     public async Task<Guid> Handle(CreatePricingGroupCommand command, CancellationToken cancellationToken)
     {
-        var pricingGroupId = Guid.NewGuid();
-        
         var pricingGroup = new Entities.PricingGroup(
-            pricingGroupId,
+            Guid.NewGuid(),
             command.Name,
             command.BasePrice,
             command.PricePerKwh,
             command.Currency);
-        
-        await _repository.AddAsync(pricingGroup);
-        return pricingGroupId;
+
+        await _pricingGroups.SaveAsync(pricingGroup, cancellationToken);
+        return pricingGroup.Id;
     }
 }

@@ -1,6 +1,8 @@
+using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Responses;
+using Marten;
 using MediatR;
 
 namespace CPMS.API.Handlers.ChargeSession;
@@ -30,69 +32,59 @@ public class StopTransactionCommand : IRequest<StopTransactionResponse>
 
 public class StopTransactionCommandHandler : IRequestHandler<StopTransactionCommand, StopTransactionResponse>
 {
-    private readonly IChargeSessionRepository _chargeSessionRepository;
-    private readonly IChargePointRepository _chargePointRepository;
+    private readonly IAggregateRepository<Entities.ChargeSession> _chargeSessions;
+    private readonly IAggregateRepository<Entities.ChargePoint> _chargePoints;
+    private readonly IQuerySession _querySession;
     private readonly ILogger<StopTransactionCommandHandler> _logger;
-    
+
     public StopTransactionCommandHandler(
-        IChargeSessionRepository chargeSessionRepository,
-        IChargePointRepository chargePointRepository,
+        IAggregateRepository<Entities.ChargeSession> chargeSessions,
+        IAggregateRepository<Entities.ChargePoint> chargePoints,
+        IQuerySession querySession,
         ILogger<StopTransactionCommandHandler> logger)
     {
-        _chargeSessionRepository = chargeSessionRepository;
-        _chargePointRepository = chargePointRepository;
+        _chargeSessions = chargeSessions;
+        _chargePoints = chargePoints;
+        _querySession = querySession;
         _logger = logger;
     }
-    
+
     public async Task<StopTransactionResponse> Handle(StopTransactionCommand command, CancellationToken cancellationToken)
     {
-        try
-        {
-            var chargeSession = await _chargeSessionRepository.GetByTransactionIdAsync(command.TranscationId);
-            
-            if (chargeSession == null)
-            {
-                _logger.LogWarning($"Received stop transaction for unknown transaction: {command.TranscationId}");
-                return new StopTransactionResponse
-                {
-                    IdTagInfo = new IdTagInfo { Status = AuthorizationStatus.Invalid }
-                };
-            }
-            
-            if (command.StopTagId == null || command.MeterStop == null)
-                throw new ArgumentNullException(nameof(command), "StopTagId and MeterStop cannot be null");
-            
-            chargeSession.StopCharging(command.StopTagId, command.MeterStop.Value, command.StopReason);
-            
-            await _chargeSessionRepository.UpdateAsync(chargeSession);
-            
-            var chargePoint = await _chargePointRepository.GetByIdAsync(chargeSession.ChargePointId);
-            
-            if (chargePoint != null)
-            {
-                var connector = chargePoint.Connectors.FirstOrDefault(c => c.Id == chargeSession.ConnectorId);
-                    
-                if (connector != null)
-                {
-                    chargePoint.UpdateConnectorStatus(connector.Id, "Available");
-                    await _chargePointRepository.UpdateAsync(chargePoint);
-                }
+        var readModel = await _querySession.Query<ChargeSessionReadModel>()
+            .FirstOrDefaultAsync(cs => cs.TransactionId == command.TranscationId, cancellationToken);
+        var chargeSession = readModel == null ? null : await _chargeSessions.LoadAsync(readModel.Id, cancellationToken);
 
-                return new StopTransactionResponse
-                {
-                    IdTagInfo = new IdTagInfo{ Status = AuthorizationStatus.Accepted}
-                };
-            }
-
-            return new StopTransactionResponse
-            {
-                IdTagInfo = new IdTagInfo { Status = AuthorizationStatus.Invalid }
-            };
-        }
-        catch (Exception ex)
+        if (chargeSession == null)
         {
-            _logger.LogError(ex, $"Error stopping transaction {command.TranscationId}");
-            throw;
+            _logger.LogWarning("Received stop transaction for unknown transaction {TransactionId}", command.TranscationId);
+            return Invalid();
         }
+
+        if (command.StopTagId == null || command.MeterStop == null)
+            throw new ArgumentNullException(nameof(command), "StopTagId and MeterStop cannot be null");
+
+        chargeSession.StopCharging(command.StopTagId, command.MeterStop.Value, command.StopReason);
+        await _chargeSessions.SaveAsync(chargeSession, cancellationToken);
+
+        var chargePoint = await _chargePoints.LoadAsync(chargeSession.ChargePointId, cancellationToken);
+        if (chargePoint == null)
+            return Invalid();
+
+        if (chargePoint.Connectors.Any(c => c.Id == chargeSession.ConnectorId))
+        {
+            chargePoint.UpdateConnectorStatus(chargeSession.ConnectorId, "Available");
+            await _chargePoints.SaveAsync(chargePoint, cancellationToken);
+        }
+
+        return new StopTransactionResponse
+        {
+            IdTagInfo = new IdTagInfo { Status = AuthorizationStatus.Accepted }
+        };
     }
+
+    private static StopTransactionResponse Invalid() => new()
+    {
+        IdTagInfo = new IdTagInfo { Status = AuthorizationStatus.Invalid }
+    };
 }

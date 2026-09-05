@@ -2,7 +2,6 @@ using CPMS.API.BusinessRules;
 using CPMS.API.Events.ChargePoint;
 using CPMS.API.Events.Connector;
 using CPMS.BuildingBlocks.Domain;
-using ConnectorStatusChangedEvent = CPMS.API.Events.ChargePoint.ConnectorStatusChangedEvent;
 
 namespace CPMS.API.Entities;
 
@@ -14,25 +13,18 @@ public class ChargePoint : Entity, IAggregateRoot
     public double? MaxPower { get; private set; }
     public double? CurrentPower { get; private set; }
 
-    private readonly List<Connector> _connectors = new List<Connector>();
+    private readonly List<Connector> _connectors = new();
     public IReadOnlyCollection<Connector> Connectors => _connectors.AsReadOnly();
 
     private ChargePoint()
     {
     }
 
-    public ChargePoint(Guid id, string ocppChargerId, Guid locationId,
-        double? maxPower, double? currentPower)
+    public ChargePoint(Guid id, string ocppChargerId, Guid locationId, double? maxPower, double? currentPower)
     {
         CheckRule(new ChargePointMustHaveValidNameRule(ocppChargerId));
 
-        var @event = new ChargePointCreatedEvent(
-            id,
-            ocppChargerId,
-            locationId,
-            maxPower,
-            0.0d
-        );
+        var @event = new ChargePointCreatedEvent(id, ocppChargerId, locationId, maxPower, currentPower ?? 0.0d);
 
         AddDomainEvent(@event);
         Apply(@event);
@@ -46,6 +38,9 @@ public class ChargePoint : Entity, IAggregateRoot
         MaxPower = @event.MaxPower;
         CurrentPower = @event.CurrentPower;
     }
+
+    /// <summary>The next free connector id: OCPP connector ids are 1-based and dense.</summary>
+    public int NextConnectorId() => _connectors.Count == 0 ? 1 : _connectors.Max(c => c.Id) + 1;
 
     public void AddConnector(int connectorId, string name)
     {
@@ -64,8 +59,7 @@ public class ChargePoint : Entity, IAggregateRoot
 
     public void UpdateConnectorStatus(int connectorId, string status)
     {
-        var connector = _connectors.SingleOrDefault(c => c.Id == connectorId);
-        if (connector == null)
+        if (_connectors.All(c => c.Id != connectorId))
             throw new BusinessRuleValidationException(new ConnectorMustExistRule(connectorId));
 
         var @event = new ConnectorStatusChangedEvent(Id, connectorId, status, DateTime.UtcNow);
@@ -76,88 +70,33 @@ public class ChargePoint : Entity, IAggregateRoot
 
     private void Apply(ConnectorStatusChangedEvent @event)
     {
-        var connector = _connectors.Single(c => c.Id == @event.ConnectorId);
-        connector.UpdateStatus(@event.Status, @event.Timestamp);
+        _connectors.Single(c => c.Id == @event.ConnectorId).UpdateStatus(@event.Status, @event.Timestamp);
     }
-    
-    public void RegisterBoot(
-        string serial,
-        string model,
-        string vendor,
-        string firmwareVersion)
+
+    public void RegisterBoot(string serial, string model, string vendor, string firmwareVersion)
     {
-        var @event = new ChargePointBootedEvent(
-            Id,
-            serial,
-            model,
-            vendor,
-            firmwareVersion,
-            DateTime.UtcNow
-        );
-        
+        var @event = new ChargePointBootedEvent(Id, serial, model, vendor, firmwareVersion, DateTime.UtcNow);
+
         AddDomainEvent(@event);
         Apply(@event);
     }
 
     private void Apply(ChargePointBootedEvent @event)
     {
-        // TODO
-        Console.WriteLine($"ChargePoint {Id} booted with serial { @event.Serial}");
+        // Boot details are recorded in the stream only; no aggregate state depends on them yet.
     }
-    
+
     public void LogConnectorError(int connectorId, string errorCode, string info)
     {
-        var @event = new ConnectorErrorLoggedEvent(
-            Id,
-            connectorId,
-            errorCode,
-            info,
-            DateTime.UtcNow
-        );
-        
+        var @event = new ConnectorErrorLoggedEvent(Id, connectorId, errorCode, info, DateTime.UtcNow);
+
         AddDomainEvent(@event);
         Apply(@event);
     }
-    
+
     private void Apply(ConnectorErrorLoggedEvent @event)
     {
-        var connector = _connectors.SingleOrDefault(c => c.Id == @event.ConnectorId);
-        if (connector != null)
-        {
-            connector.LogError(@event.ErrorCode, @event.Info, @event.Timestamp);
-        }
-    }
-    
-    public void UpdateChargingProfile(int profileId, string profileData)
-    {
-        var @event = new ChargingProfileUpdatedEvent(
-            Id,
-            profileId,
-            profileData
-        );
-        
-        AddDomainEvent(@event);
-        Apply(@event);
-    }
-    
-    private void Apply(ChargingProfileUpdatedEvent @event)
-    {
-        //TODO Ažuriranje charging profile podataka
-    }
-    
-    public void Reset(string resetType)
-    {
-        var @event = new ChargePointResetEvent(
-            Id,
-            resetType
-        );
-        
-        AddDomainEvent(@event);
-        Apply(@event);
-    }
-    
-    private void Apply(ChargePointResetEvent @event)
-    {
-        //TODO Možemo resetirati statuse konektora ili druge informacije
+        _connectors.SingleOrDefault(c => c.Id == @event.ConnectorId)
+            ?.LogError(@event.ErrorCode, @event.Info, @event.Timestamp);
     }
 }

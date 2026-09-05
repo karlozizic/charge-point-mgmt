@@ -14,93 +14,77 @@ public class WebhookController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly ILogger<WebhookController> _logger;
     private readonly IQuerySession _querySession;
-    private readonly ISessionBillingRepository _billingRepository;
+    private readonly IAggregateRepository<Entities.SessionBilling> _billings;
 
     public WebhookController(
         IConfiguration configuration,
         ILogger<WebhookController> logger,
         IQuerySession querySession,
-        ISessionBillingRepository billingRepository)
+        IAggregateRepository<Entities.SessionBilling> billings)
     {
         _configuration = configuration;
         _logger = logger;
         _querySession = querySession;
-        _billingRepository = billingRepository;
+        _billings = billings;
     }
 
     [HttpPost("stripe")]
     public async Task<IActionResult> HandleStripeWebhook()
     {
-        _logger.LogInformation("Received Stripe webhook request");
-        
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-        var endpointSecret = Environment.GetEnvironmentVariable("STRIPE_WEBHOOK_SECRET_PROD") ?? 
+        var endpointSecret = Environment.GetEnvironmentVariable("STRIPE_WEBHOOK_SECRET_PROD") ??
                              _configuration["Stripe:WebhookSecretProd"];
 
+        Event stripeEvent;
         try
         {
-            var stripeEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"], endpointSecret);
-        
-            _logger.LogInformation("Webhook: {EventType}", stripeEvent.Type);
+            stripeEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"], endpointSecret);
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogWarning(ex, "Rejected Stripe webhook: invalid payload or signature");
+            return BadRequest();
+        }
 
-            if (stripeEvent.Type == "checkout.session.completed")
+        _logger.LogInformation("Stripe webhook: {EventType}", stripeEvent.Type);
+
+        switch (stripeEvent.Type)
+        {
+            case "checkout.session.completed" when stripeEvent.Data.Object is Session session:
             {
-                if (stripeEvent.Data.Object is Session session)
-                {
-                    var billing = await _querySession
-                        .Query<SessionBillingReadModel>()
-                        .FirstOrDefaultAsync(b => b.StripeSessionId == session.Id);
-
-                    if (billing != null)
-                    {
-                        await MarkBillingAsPaid(billing.Id);
-                    }
-                }
+                var billing = await _querySession
+                    .Query<SessionBillingReadModel>()
+                    .FirstOrDefaultAsync(b => b.StripeSessionId == session.Id);
+                if (billing != null)
+                    await MarkBillingAsPaid(billing.Id);
+                break;
             }
-            else if (stripeEvent.Type == "payment_intent.succeeded")
+            case "payment_intent.succeeded":
             {
+                // Known gap: the payment intent is not correlated to a billing, so the most recent
+                // pending one is assumed. Can mark the wrong session as paid.
                 var recentBilling = await _querySession
                     .Query<SessionBillingReadModel>()
                     .Where(b => b.PaymentStatus == "pending_payment")
                     .OrderByDescending(b => b.CreatedAt)
                     .FirstOrDefaultAsync();
-
                 if (recentBilling != null)
-                {
-                    _logger.LogInformation("Marking recent billing as paid: {BillingId}", recentBilling.Id);
                     await MarkBillingAsPaid(recentBilling.Id);
-                }
+                break;
             }
+        }
 
-            return Ok();
-        }
-        catch (StripeException ex)
-        {
-            _logger.LogError(ex, "Stripe webhook error");
-            return BadRequest();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Webhook error");
-            return BadRequest();
-        }
+        return Ok();
     }
 
     private async Task MarkBillingAsPaid(Guid billingId)
     {
-        try
-        {
-            var billing = await _billingRepository.GetByIdAsync(billingId);
-            if (billing?.PaymentStatus != "succeeded")
-            {
-                billing?.MarkAsPaid();
-                await _billingRepository.UpdateAsync(billing);
-                _logger.LogInformation("Billing marked as paid: {BillingId}", billingId);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to mark billing as paid: {BillingId}", billingId);
-        }
+        var billing = await _billings.LoadAsync(billingId);
+        if (billing == null)
+            return;
+
+        billing.MarkAsPaid();
+        await _billings.SaveAsync(billing);
+        _logger.LogInformation("Billing marked as paid: {BillingId}", billingId);
     }
 }

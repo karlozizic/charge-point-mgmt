@@ -1,8 +1,6 @@
 using CPMS.API.BusinessRules;
 using CPMS.API.Events.ChargeSession;
-using CPMS.API.Handlers.ChargeSession;
 using CPMS.BuildingBlocks.Domain;
-using CPMS.Core.Models.Requests;
 
 namespace CPMS.API.Entities;
 
@@ -18,10 +16,10 @@ public class ChargeSession : Entity, IAggregateRoot
     public double StartMeterValue { get; private set; }
     public double? StopMeterValue { get; private set; }
     public string Status { get; private set; }
-    
-    private readonly List<MeterValue> _meterValues = new List<MeterValue>();
+
+    private readonly List<MeterValue> _meterValues = new();
     public IReadOnlyCollection<MeterValue> MeterValues => _meterValues.AsReadOnly();
-    
+
     private ChargeSession() { }
 
     public ChargeSession(
@@ -39,13 +37,12 @@ public class ChargeSession : Entity, IAggregateRoot
             connectorId,
             tagId,
             DateTime.UtcNow,
-            startMeterValue
-            );
+            startMeterValue);
 
         AddDomainEvent(@event);
         Apply(@event);
     }
-    
+
     private void Apply(ChargeSessionStartedEvent @event)
     {
         Id = @event.ChargeSessionId;
@@ -58,36 +55,35 @@ public class ChargeSession : Entity, IAggregateRoot
         Status = "Started";
     }
 
-    public void AddMeterValue(MeterValuesCommand request, DateTime timestamp)
+    public void AddMeterValue(double? currentPower, double? energyConsumed, double? stateOfCharge, DateTime timestamp)
     {
         if (StopTime.HasValue)
             throw new BusinessRuleValidationException(new CannotAddMeterValuesAfterStopRule());
 
         var @event = new MeterValueRecordedEvent(
             Id,
-            request.TransactionId,
+            TransactionId,
             ChargePointId,
             ConnectorId,
             timestamp,
-            request.CurrentPower,
-            request.EnergyConsumed,
-            request.StateOfCharge
-            );
-        
+            currentPower,
+            energyConsumed,
+            stateOfCharge);
+
         AddDomainEvent(@event);
         Apply(@event);
     }
-    
+
     private void Apply(MeterValueRecordedEvent @event)
     {
         _meterValues.Add(new MeterValue(@event.Timestamp, @event.ChargeSessionId, @event.CurrentPower, @event.EnergyConsumed, @event.StateOfCharge));
     }
-        
+
     public void StopCharging(string tagId, double stopMeterValue, string stopReason)
     {
         if (StopTime.HasValue)
             throw new BusinessRuleValidationException(new CannotStopAlreadyStoppedSessionRule());
-            
+
         var @event = new ChargeSessionStoppedEvent(
             Id,
             ChargePointId,
@@ -95,13 +91,12 @@ public class ChargeSession : Entity, IAggregateRoot
             tagId,
             DateTime.UtcNow,
             stopMeterValue,
-            stopReason
-        );
-            
+            stopReason);
+
         AddDomainEvent(@event);
         Apply(@event);
     }
-        
+
     private void Apply(ChargeSessionStoppedEvent @event)
     {
         StopTime = @event.StopTime;

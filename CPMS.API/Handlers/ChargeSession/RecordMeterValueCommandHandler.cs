@@ -1,62 +1,49 @@
+using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.Core.Models.Requests;
+using Marten;
 using MediatR;
 
 namespace CPMS.API.Handlers.ChargeSession;
 
-public class MeterValuesCommand : IRequest
-{
-    public string OcppChargerId { get; set; }
-    public int TransactionId { get; set; }
-    public double? CurrentPower { get; private set; }
-    public double? EnergyConsumed { get; private set; }
-    public DateTimeOffset? MeterTime { get; private set; }
-    public double? StateOfCharge { get; private set; }
-    
-    public MeterValuesCommand(MeterValuesRequest request)
-    {
-        OcppChargerId = request.OcppChargerId;
-        TransactionId = request.TransactionId;
-        CurrentPower = request.CurrentPower;
-        EnergyConsumed = request.EnergyConsumed;
-        MeterTime = request.MeterTime ?? DateTimeOffset.UtcNow;
-        StateOfCharge = request.StateOfCharge;
-    }
-}
+public record MeterValuesCommand(MeterValuesRequest Request) : IRequest;
 
-public class RecordMeterValuerequestHandler : IRequestHandler<MeterValuesCommand>
+public class MeterValuesCommandHandler : IRequestHandler<MeterValuesCommand>
 {
-    private readonly IChargeSessionRepository _chargeSessionRepository;
-    private readonly ILogger<RecordMeterValuerequestHandler> _logger;
-        
-    public RecordMeterValuerequestHandler(
-        IChargeSessionRepository chargeSessionRepository,
-        ILogger<RecordMeterValuerequestHandler> logger)
+    private readonly IAggregateRepository<Entities.ChargeSession> _chargeSessions;
+    private readonly IQuerySession _querySession;
+    private readonly ILogger<MeterValuesCommandHandler> _logger;
+
+    public MeterValuesCommandHandler(
+        IAggregateRepository<Entities.ChargeSession> chargeSessions,
+        IQuerySession querySession,
+        ILogger<MeterValuesCommandHandler> logger)
     {
-        _chargeSessionRepository = chargeSessionRepository;
+        _chargeSessions = chargeSessions;
+        _querySession = querySession;
         _logger = logger;
     }
-    
-    public async Task Handle(MeterValuesCommand request, CancellationToken cancellationToken)
+
+    public async Task Handle(MeterValuesCommand command, CancellationToken cancellationToken)
     {
-        try
+        var request = command.Request;
+
+        var readModel = await _querySession.Query<ChargeSessionReadModel>()
+            .FirstOrDefaultAsync(cs => cs.TransactionId == request.TransactionId, cancellationToken);
+        var chargeSession = readModel == null ? null : await _chargeSessions.LoadAsync(readModel.Id, cancellationToken);
+
+        if (chargeSession == null)
         {
-            var chargeSession = await _chargeSessionRepository.GetByTransactionIdAsync(request.TransactionId);
-                
-            if (chargeSession == null)
-            {
-                _logger.LogWarning($"Received meter value for unknown transaction: {request.TransactionId}");
-                return;
-            }
-                
-            chargeSession.AddMeterValue(request, DateTime.UtcNow);
-                
-            await _chargeSessionRepository.UpdateAsync(chargeSession);
+            _logger.LogWarning("Received meter value for unknown transaction {TransactionId}", request.TransactionId);
+            return;
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error recording meter value for transaction {request.TransactionId}");
-            throw;
-        }
+
+        chargeSession.AddMeterValue(
+            request.CurrentPower,
+            request.EnergyConsumed,
+            request.StateOfCharge,
+            (request.MeterTime ?? DateTimeOffset.UtcNow).UtcDateTime);
+
+        await _chargeSessions.SaveAsync(chargeSession, cancellationToken);
     }
 }

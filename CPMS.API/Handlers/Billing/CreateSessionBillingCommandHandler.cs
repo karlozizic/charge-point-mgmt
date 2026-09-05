@@ -11,56 +11,52 @@ public class CreateSessionBillingCommand : IRequest<Guid>
     public double EnergyConsumed { get; set; }
 }
 
-
 public class CreateSessionBillingCommandHandler : IRequestHandler<CreateSessionBillingCommand, Guid>
 {
-    private readonly ISessionBillingRepository _billingRepository;
-    private readonly IPricingGroupRepository _pricingRepository;
+    private readonly IAggregateRepository<Entities.SessionBilling> _billings;
+    private readonly IAggregateRepository<Entities.PricingGroup> _pricingGroups;
     private readonly IQuerySession _querySession;
-    
+
     public CreateSessionBillingCommandHandler(
-        ISessionBillingRepository billingRepository,
-        IPricingGroupRepository pricingRepository,
+        IAggregateRepository<Entities.SessionBilling> billings,
+        IAggregateRepository<Entities.PricingGroup> pricingGroups,
         IQuerySession querySession)
     {
-        _billingRepository = billingRepository;
-        _pricingRepository = pricingRepository;
+        _billings = billings;
+        _pricingGroups = pricingGroups;
         _querySession = querySession;
     }
-    
+
     public async Task<Guid> Handle(CreateSessionBillingCommand command, CancellationToken cancellationToken)
     {
-        var sessionReadModel = await _querySession
+        var session = await _querySession
             .Query<ChargeSessionReadModel>()
             .FirstOrDefaultAsync(s => s.Id == command.SessionId, cancellationToken);
-            
-        if (sessionReadModel == null)
+        if (session == null)
             throw new InvalidOperationException($"Session {command.SessionId} not found");
-        
+
+        var chargePointId = Guid.Parse(session.ChargePointId);
         var pricingGroupReadModel = await _querySession
             .Query<PricingGroupReadModel>()
-            .FirstOrDefaultAsync(pg => pg.ChargePointIds.Contains(Guid.Parse(sessionReadModel.ChargePointId)), 
-                cancellationToken);
-        
+            .FirstOrDefaultAsync(pg => pg.ChargePointIds.Contains(chargePointId), cancellationToken);
         if (pricingGroupReadModel == null)
             throw new InvalidOperationException("No pricing group found for this charge point");
-        
-        var pricingGroup = await _pricingRepository.GetByIdAsync(pricingGroupReadModel.Id);
+
+        var pricingGroup = await _pricingGroups.LoadAsync(pricingGroupReadModel.Id, cancellationToken);
         if (pricingGroup == null)
             throw new InvalidOperationException("Pricing group not found");
-        
+
         var totalCost = pricingGroup.CalculateSessionCost(command.EnergyConsumed);
-        var baseAmount = pricingGroup.BasePrice;
-        var energyAmount = totalCost - baseAmount;
-        
+
         var billing = new Entities.SessionBilling(
+            Guid.NewGuid(),
             command.SessionId,
             pricingGroup.Id,
-            baseAmount,
-            energyAmount,
+            pricingGroup.BasePrice,
+            totalCost - pricingGroup.BasePrice,
             pricingGroup.Currency);
-        
-        await _billingRepository.AddAsync(billing);
+
+        await _billings.SaveAsync(billing, cancellationToken);
         return billing.Id;
     }
 }
