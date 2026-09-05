@@ -22,7 +22,7 @@ public class ChargePointProjection : SingleStreamProjection<ChargePointReadModel
                 ConnectorId = @event.ConnectorId,
                 Name = @event.ConnectorName,
                 Status = "Available",
-                LastStatusTime = DateTime.UtcNow
+                LastStatusTime = @event.AddedAt
             });
             return model;
         });
@@ -53,7 +53,7 @@ public class ChargePointProjection : SingleStreamProjection<ChargePointReadModel
                     
                 model.ConnectorErrors.Add(new ConnectorErrorReadModel
                 {
-                    Id = Guid.NewGuid(),
+                    Id = @event.ErrorId,
                     ConnectorId = @event.ConnectorId,
                     ErrorCode = @event.ErrorCode,
                     Info = @event.Info,

@@ -17,12 +17,12 @@ public class Connector : Entity
     {
     }
 
-    public Connector(int id, string name)
+    public Connector(int id, string name, DateTime addedAt)
     {
         Id = id;
         Name = name;
         Status = "Available";
-        LastStatusTime = DateTime.UtcNow;
+        LastStatusTime = addedAt;
     }
 
     public void UpdateStatus(string status, DateTime timestamp)

@@ -46,7 +46,7 @@ public class ChargePoint : Entity, IAggregateRoot
     {
         CheckRule(new ConnectorMustHaveUniqueIdRule(connectorId, _connectors));
 
-        var @event = new ConnectorAddedEvent(Id, connectorId, name);
+        var @event = new ConnectorAddedEvent(Id, connectorId, name, DateTime.UtcNow);
 
         AddDomainEvent(@event);
         Apply(@event);
@@ -54,7 +54,7 @@ public class ChargePoint : Entity, IAggregateRoot
 
     private void Apply(ConnectorAddedEvent @event)
     {
-        _connectors.Add(new Connector(@event.ConnectorId, @event.ConnectorName));
+        _connectors.Add(new Connector(@event.ConnectorId, @event.ConnectorName, @event.AddedAt));
     }
 
     public void UpdateConnectorStatus(int connectorId, string status)
@@ -88,7 +88,7 @@ public class ChargePoint : Entity, IAggregateRoot
 
     public void LogConnectorError(int connectorId, string errorCode, string info)
     {
-        var @event = new ConnectorErrorLoggedEvent(Id, connectorId, errorCode, info, DateTime.UtcNow);
+        var @event = new ConnectorErrorLoggedEvent(Guid.NewGuid(), Id, connectorId, errorCode, info, DateTime.UtcNow);
 
         AddDomainEvent(@event);
         Apply(@event);
