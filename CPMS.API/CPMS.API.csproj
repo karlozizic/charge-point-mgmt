@@ -8,13 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="8.0.0" />
-        <PackageReference Include="Marten" Version="8.2.1" />
-        <PackageReference Include="Marten.AspNetCore" Version="8.2.1" />
-        <PackageReference Include="Marten.CommandLine" Version="7.40.5" />
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.13"/>
-        <PackageReference Include="Stripe.net" Version="48.1.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
+        <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+        <PackageReference Include="Marten" Version="8.38.1" />
+        <PackageReference Include="Marten.AspNetCore" Version="8.38.1" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.30"/>
+        <PackageReference Include="Stripe.net" Version="52.4.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3"/>
     </ItemGroup>
 
     <ItemGroup>

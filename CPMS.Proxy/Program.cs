@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.WebSockets;
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
-builder.Services.AddApplicationInsightsTelemetry();
-
 builder.Logging.ClearProviders();
 
 builder.Logging.AddConsole(options =>
@@ -15,12 +13,6 @@ builder.Logging.AddConsole(options =>
     options.IncludeScopes = false;
     options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
 });
-
-builder.Logging.AddApplicationInsights(
-    configureTelemetryConfiguration: config =>
-        config.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"],
-    configureApplicationInsightsLoggerOptions: (options) => { }
-);
 
 builder.Logging.SetMinimumLevel(LogLevel.Trace);
 

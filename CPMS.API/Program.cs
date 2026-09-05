@@ -10,8 +10,6 @@ using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddApplicationInsightsTelemetry();
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -27,12 +25,6 @@ builder.Logging.AddConsole(options =>
     options.IncludeScopes = false;
     options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
 });
-
-builder.Logging.AddApplicationInsights(
-    configureTelemetryConfiguration: config =>
-        config.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"],
-    configureApplicationInsightsLoggerOptions: (options) => { }
-);
 
 builder.Logging.SetMinimumLevel(LogLevel.Trace);
 
