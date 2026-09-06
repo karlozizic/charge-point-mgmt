@@ -8,37 +8,24 @@ public partial class ControllerOcpp16
 {
     private string? HandleDataTransfer(OCPPMessage msgIn, OCPPMessage msgOut)
     {
-        string? errorCode = null;
-        DataTransferResponse dataTransferResponse = new DataTransferResponse();
-
-        bool msgWritten = false;
-
         try
         {
-            DataTransferRequest dataTransferRequest = JsonConvert.DeserializeObject<DataTransferRequest>(msgIn.JsonPayload) ?? throw new InvalidOperationException();
+            var request = JsonConvert.DeserializeObject<DataTransferRequest>(msgIn.JsonPayload)
+                          ?? throw new InvalidOperationException("Empty DataTransfer payload");
 
-            if (ChargePointStatus != null)
-            {
-                // Known charge station
-                Logger.Info($"Incoming data transfer request from {ChargePointStatus.Id} with VendorId={dataTransferRequest.VendorId} / MessageId={dataTransferRequest.MessageId} / Data={dataTransferRequest.Data}");
-                dataTransferResponse.Status = DataTransferResponseStatus.Accepted;
-            }
-            else
-            {
-                // Unknown charge station
-                errorCode = ErrorCodes.GenericError;
-                dataTransferResponse.Status = DataTransferResponseStatus.Rejected;
-            }
+            // Vendor-specific data is accepted and logged; nothing consumes it yet.
+            Logger.Info($"DataTransfer from {ChargePointStatus.Id}: VendorId={request.VendorId} / MessageId={request.MessageId} / Data={request.Data}");
 
-            msgOut.JsonPayload = JsonConvert.SerializeObject(dataTransferResponse);
-            Logger.Info($"DataTransfer => Response serialized: {msgOut.JsonPayload}");
+            msgOut.JsonPayload = JsonConvert.SerializeObject(new DataTransferResponse
+            {
+                Status = DataTransferResponseStatus.Accepted
+            });
+            return null;
         }
         catch (Exception exp)
         {
-            Logger.Error("DataTransfer => Exception: {0}", exp);
-            errorCode = ErrorCodes.InternalError;
+            Logger.Error($"DataTransfer => Exception: {exp.Message}");
+            return ErrorCodes.InternalError;
         }
-            
-        return errorCode;
     }
 }

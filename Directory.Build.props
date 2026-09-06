@@ -1,0 +1,12 @@
+<Project>
+
+    <PropertyGroup>
+        <!--
+          The projects target net8.0, but a dev machine may only have the .NET 10 runtime installed.
+          Rolling forward keeps `dotnet run`, `dotnet test` and the Rider run configurations working
+          without DOTNET_ROLL_FORWARD set in every shell.
+        -->
+        <RollForward>LatestMajor</RollForward>
+    </PropertyGroup>
+
+</Project>

@@ -1,6 +1,7 @@
 using CPMS.API.Dtos;
 using CPMS.API.Handlers.ChargeSession;
 using CPMS.API.Projections;
+using CPMS.Core.Common;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,9 +17,9 @@ public class ChargeSessionsController : ControllerBase
     {
         _mediator = mediator;
     }
-    
+
     [HttpGet]
-    public async Task<ActionResult<List<ChargeSessionReadModel>>> GetAll(
+    public async Task<ActionResult<PagedResult<ChargeSessionReadModel>>> GetAll(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10,
         [FromQuery] SessionStatus? status = null,
@@ -26,7 +27,7 @@ public class ChargeSessionsController : ControllerBase
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)
     {
-        var query = new GetAllChargeSessionsQuery
+        var sessions = await _mediator.Send(new GetAllChargeSessionsQuery
         {
             PageNumber = pageNumber,
             PageSize = pageSize,
@@ -34,78 +35,62 @@ public class ChargeSessionsController : ControllerBase
             TagId = tagId,
             StartDate = startDate,
             EndDate = endDate
-        };
+        });
 
-        var sessions = await _mediator.Send(query);
-        
         return Ok(sessions);
     }
-    
+
     [HttpGet("{id}")]
     public async Task<ActionResult<ChargeSessionReadModel>> GetById(Guid id)
     {
         var session = await _mediator.Send(new GetChargeSessionByIdQuery { SessionId = id });
-            
-        if (session == null)
-            return NotFound();
-                
-        return Ok(session);
+        return session == null ? NotFound() : Ok(session);
     }
-    
+
     [HttpGet("active")]
     public async Task<ActionResult<List<ChargeSessionReadModel>>> GetActive()
     {
-        var sessions = await _mediator.Send(new GetActiveChargeSessionsQuery());
-        return Ok(sessions);
+        return Ok(await _mediator.Send(new GetActiveChargeSessionsQuery()));
     }
-    
+
     [HttpGet("by-chargepoint/{chargePointId}")]
     public async Task<ActionResult<List<ChargeSessionReadModel>>> GetByChargePoint(
         string chargePointId,
         [FromQuery] DateTime? fromDate = null,
         [FromQuery] DateTime? toDate = null)
     {
-        var query = new GetChargeSessionsByChargePointQuery
+        var sessions = await _mediator.Send(new GetChargeSessionsByChargePointQuery
         {
             ChargePointId = chargePointId,
             FromDate = fromDate,
             ToDate = toDate
-        };
+        });
 
-        var sessions = await _mediator.Send(query);
         return Ok(sessions);
     }
-    
+
     [HttpGet("stats")]
     public async Task<ActionResult<ChargeSessionStatsDto>> GetStats(
         [FromQuery] DateTime? fromDate = null,
         [FromQuery] DateTime? toDate = null,
         [FromQuery] string? chargePointId = null)
     {
-        var query = new GetChargeSessionStatsQuery
+        var stats = await _mediator.Send(new GetChargeSessionStatsQuery
         {
             FromDate = fromDate,
             ToDate = toDate,
             ChargePointId = chargePointId
-        };
+        });
 
-        var stats = await _mediator.Send(query);
         return Ok(stats);
     }
 
     [HttpGet("{sessionId}/export/csv")]
     public async Task<IActionResult> ExportToCsv(Guid sessionId)
     {
-        try
-        {
-            var csvContent = await _mediator.Send(new ExportChargeSessionToCsvQuery { SessionId = sessionId });
-            var fileName = $"session-{sessionId}-{DateTime.Now:yyyyMMdd}.csv";
+        var csv = await _mediator.Send(new ExportChargeSessionToCsvQuery { SessionId = sessionId });
+        var fileName = $"session-{sessionId}-{DateTime.Now:yyyyMMdd}.csv";
 
-            return File(System.Text.Encoding.UTF8.GetBytes(csvContent), "text/csv", fileName);
-        }
-        catch (InvalidOperationException)
-        {
-            return NotFound();
-        }
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
     }
 }

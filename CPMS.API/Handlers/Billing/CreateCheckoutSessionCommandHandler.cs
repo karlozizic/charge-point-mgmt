@@ -1,4 +1,5 @@
 using CPMS.API.Dtos;
+using CPMS.API.Exceptions;
 using CPMS.API.Repositories;
 using CPMS.API.Services;
 using MediatR;
@@ -13,25 +14,25 @@ public class CreateCheckoutSessionCommand : IRequest<CheckoutSessionResponse>
 
 public class CreateCheckoutSessionCommandHandler : IRequestHandler<CreateCheckoutSessionCommand, CheckoutSessionResponse>
 {
-    private readonly ISessionBillingRepository _repository;
+    private readonly IAggregateRepository<Entities.SessionBilling> _billings;
     private readonly IStripeService _stripeService;
     private readonly IConfiguration _configuration;
 
     public CreateCheckoutSessionCommandHandler(
-        ISessionBillingRepository repository,
+        IAggregateRepository<Entities.SessionBilling> billings,
         IStripeService stripeService,
         IConfiguration configuration)
     {
-        _repository = repository;
+        _billings = billings;
         _stripeService = stripeService;
         _configuration = configuration;
     }
 
     public async Task<CheckoutSessionResponse> Handle(CreateCheckoutSessionCommand command, CancellationToken cancellationToken)
     {
-        var billing = await _repository.GetByIdAsync(command.SessionBillingId);
+        var billing = await _billings.LoadAsync(command.SessionBillingId, cancellationToken);
         if (billing == null)
-            throw new InvalidOperationException("Billing record not found");
+            throw new NotFoundException("Billing record not found");
 
         var baseUrl = _configuration["App:FrontendUrl"];
         var successUrl = $"{baseUrl}/payment-success?session_id={{CHECKOUT_SESSION_ID}}&billing_session={billing.SessionId}";
@@ -46,7 +47,7 @@ public class CreateCheckoutSessionCommandHandler : IRequestHandler<CreateCheckou
             cancelUrl);
 
         billing.SetStripeSessionId(checkoutSession.SessionId);
-        await _repository.UpdateAsync(billing);
+        await _billings.SaveAsync(billing, cancellationToken);
 
         return checkoutSession;
     }

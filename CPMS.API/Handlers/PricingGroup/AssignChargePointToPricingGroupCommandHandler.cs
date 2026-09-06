@@ -1,3 +1,4 @@
+using CPMS.API.Exceptions;
 using CPMS.API.Repositories;
 using MediatR;
 
@@ -11,21 +12,20 @@ public class AssignChargePointToPricingGroupCommand : IRequest
 
 public class AssignChargePointToPricingGroupCommandHandler : IRequestHandler<AssignChargePointToPricingGroupCommand>
 {
-    private readonly IPricingGroupRepository _repository;
+    private readonly IAggregateRepository<Entities.PricingGroup> _pricingGroups;
 
-    public AssignChargePointToPricingGroupCommandHandler(IPricingGroupRepository repository)
+    public AssignChargePointToPricingGroupCommandHandler(IAggregateRepository<Entities.PricingGroup> pricingGroups)
     {
-        _repository = repository;
+        _pricingGroups = pricingGroups;
     }
 
     public async Task Handle(AssignChargePointToPricingGroupCommand command, CancellationToken cancellationToken)
     {
-        var pricingGroup = await _repository.GetByIdAsync(command.PricingGroupId);
-        
+        var pricingGroup = await _pricingGroups.LoadAsync(command.PricingGroupId, cancellationToken);
         if (pricingGroup == null)
-            throw new InvalidOperationException($"Pricing group {command.PricingGroupId} not found");
+            throw new NotFoundException($"Pricing group {command.PricingGroupId} not found");
 
         pricingGroup.AssignChargePoint(command.ChargePointId);
-        await _repository.UpdateAsync(pricingGroup);
+        await _pricingGroups.SaveAsync(pricingGroup, cancellationToken);
     }
 }

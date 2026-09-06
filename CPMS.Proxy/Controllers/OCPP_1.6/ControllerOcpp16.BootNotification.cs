@@ -1,4 +1,3 @@
-using CPMS.Core.Models.Requests;
 using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
@@ -8,64 +7,43 @@ namespace CPMS.Proxy.Controllers.OCPP_1._6;
 
 public partial class ControllerOcpp16
 {
-    public async Task<string?> HandleBootNotification(OCPPMessage msgIn, OCPPMessage msgOut)
+    private async Task<string?> HandleBootNotification(OCPPMessage msgIn, OCPPMessage msgOut)
     {
-        string? errorCode = null;
-
         try
         {
-            Logger.Info("Processing boot notification...");
-            Proxy.OCPP_1._6.BootNotificationRequest bootNotificationRequest = JsonConvert.DeserializeObject<Proxy.OCPP_1._6.BootNotificationRequest>(msgIn.JsonPayload) 
-                                                                              ?? throw new InvalidOperationException();
-            Logger.Info($"BootNotification => Message deserialized: {bootNotificationRequest}");
+            var boot = JsonConvert.DeserializeObject<Proxy.OCPP_1._6.BootNotificationRequest>(msgIn.JsonPayload)
+                       ?? throw new InvalidOperationException("Empty BootNotification payload");
 
-            BootNotificationResponse bootNotificationResponse = new BootNotificationResponse
+            var registered = await _cpmsClient.BootNotification(new BootNotificationRequest
             {
-                CurrentTime = DateTimeOffset.UtcNow,
-                Interval = 300
-            };
-
-            if (ChargePointStatus != null)
-            {
-                // Known charge station => accept
-                bootNotificationResponse.Status = BootNotificationResponseStatus.Accepted;
-            }
-            else
-            {
-                // Unknown charge station => reject
-                bootNotificationResponse.Status = BootNotificationResponseStatus.Rejected;
-                msgOut.JsonPayload = JsonConvert.SerializeObject(bootNotificationResponse);
-                return ErrorCodes.FormationViolation;
-            }
-
-            msgOut.JsonPayload = JsonConvert.SerializeObject(bootNotificationResponse);
-            Logger.Info($"BootNotification => Response serialized: {msgOut.JsonPayload}");
-
-            var bootNotificationCpmsRequest = new BootNotificationRequest
-            {
-                ChargePointVendor = bootNotificationRequest.ChargePointVendor,
-                ChargePointModel = bootNotificationRequest.ChargePointModel,
-                ChargePointSerialNumber = bootNotificationRequest.ChargePointSerialNumber,
-                ChargeBoxSerialNumber = bootNotificationRequest.ChargeBoxSerialNumber,
-                FirmwareVersion = bootNotificationRequest.FirmwareVersion,
-                Iccid = bootNotificationRequest.Iccid,
-                Imsi = bootNotificationRequest.Imsi,
                 OcppChargerId = ChargePointStatus.Id,
                 Protocol = ChargePointStatus.Protocol,
-                MeterType = bootNotificationRequest.MeterType,
-                MeterSerialNumber = bootNotificationRequest.MeterSerialNumber
-            };
-            
-            await _cpmsClient.BootNotification(bootNotificationCpmsRequest);
-            Logger.Info($"BootNotification => CPMS request sent: {bootNotificationCpmsRequest}");
-            msgOut.JsonPayload = JsonConvert.SerializeObject(bootNotificationCpmsRequest);
+                ChargePointVendor = boot.ChargePointVendor,
+                ChargePointModel = boot.ChargePointModel,
+                ChargePointSerialNumber = boot.ChargePointSerialNumber,
+                ChargeBoxSerialNumber = boot.ChargeBoxSerialNumber,
+                FirmwareVersion = boot.FirmwareVersion,
+                Iccid = boot.Iccid,
+                Imsi = boot.Imsi,
+                MeterType = boot.MeterType,
+                MeterSerialNumber = boot.MeterSerialNumber
+            });
+
+            // OCPP 1.6 §4.2: an unknown charger gets a Rejected conf, not a CALLERROR.
+            msgOut.JsonPayload = JsonConvert.SerializeObject(new BootNotificationResponse
+            {
+                CurrentTime = DateTimeOffset.UtcNow,
+                Interval = 300,
+                Status = registered ? BootNotificationResponseStatus.Accepted : BootNotificationResponseStatus.Rejected
+            });
+
+            Logger.Info($"BootNotification => {ChargePointStatus.Id} {(registered ? "accepted" : "rejected: not registered")}");
+            return null;
         }
         catch (Exception exp)
         {
             Logger.Error($"BootNotification => Exception: {exp.Message}");
-            errorCode = ErrorCodes.FormationViolation;
+            return ErrorCodes.InternalError;
         }
-
-        return errorCode;
     }
 }

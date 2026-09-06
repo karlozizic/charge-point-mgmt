@@ -7,336 +7,250 @@ using CPMS.Proxy.Controllers.OCPP_1._6;
 using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
 using CPMS.Proxy.Services;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using ControllerOcpp16 = CPMS.Proxy.Controllers.OCPP_1._6.ControllerOcpp16;
 
-namespace CPMS.Proxy.Configuration;
+namespace CPMS.Proxy.Middleware;
 
-public partial class OcppMiddleware
+/// <summary>
+/// Accepts OCPP 1.6-J WebSocket connections on /OCPP/{chargePointId} and dispatches each CALL frame to
+/// <see cref="ControllerOcpp16"/>. Every other path is passed down the pipeline.
+/// </summary>
+public class OcppMiddleware
 {
     private const string ProtocolOcpp16 = "ocpp1.6";
-    private static readonly string[] SupportedProtocols = { ProtocolOcpp16 };
-    private static readonly Regex MessageRegExp = new Regex(
-        @"^\[\s*(\d+)\s*,\s*""([^""]+)""\s*,(?:\s*""(\w*)""\s*,)?\s*(.*)\s*\]$", 
+
+    // [MessageType, "UniqueId", "Action", {payload}]  or  [MessageType, "UniqueId", {payload}]
+    private static readonly Regex MessageRegExp = new(
+        @"^\[\s*(\d+)\s*,\s*""([^""]+)""\s*,(?:\s*""(\w*)""\s*,)?\s*(.*)\s*\]$",
         RegexOptions.Compiled);
 
-    private readonly IConfiguration _configuration;
     private readonly RequestDelegate _next;
     private readonly ILoggerService _logger;
-    private readonly IServiceProvider _serviceProvider;
-    
+    private readonly IServiceScopeFactory _scopeFactory;
+
+    // Connected chargers live in this process only: the gateway cannot run as more than one instance yet.
     private readonly ConcurrentDictionary<string, ChargePointStatus> _chargePoints = new();
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<OCPPMessage>> _pendingRequests = new();
-    
-    public OcppMiddleware(
-        IConfiguration config,
-        RequestDelegate next,
-        ILoggerService logger,
-        IServiceProvider serviceProvider)
+
+    public OcppMiddleware(RequestDelegate next, ILoggerService logger, IServiceScopeFactory scopeFactory)
     {
-        _configuration = config;
         _next = next;
         _logger = logger;
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task Invoke(HttpContext context)
     {
-        if (context.Request.Path.StartsWithSegments("/OCPP"))
+        if (!context.Request.Path.StartsWithSegments("/OCPP", out var remaining))
         {
-            await HandleOcppConnection(context);
-        }
-        else if (context.Request.Path.StartsWithSegments("/api"))
-        {
-            //todo: stream?
             await _next(context);
+            return;
         }
-        else
-        {
-            _logger.Info($"OCPPMiddleware => request with invalid path {context.Request.Path}");
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-        } 
-    }
 
-    private async Task HandleOcppConnection(HttpContext context)
-    {
-        string? chargePointId = ExtractChargePointId(context.Request.Path);
+        // The charge point id is the last path segment, so nested URLs like /OCPP/site1/CP-001 work.
+        var chargePointId = remaining.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
         if (string.IsNullOrEmpty(chargePointId))
         {
-            _logger.Error("OCPPMiddleware => Invalid chargepoint ID");
+            _logger.Error($"OCPPMiddleware => Invalid charge point path: {context.Request.Path}");
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
         }
-        
+
         if (!context.WebSockets.IsWebSocketRequest)
         {
-            _logger.Error("OCPPMiddleware => Non-WebSocket request");
+            _logger.Error($"OCPPMiddleware => Non-WebSocket request for {chargePointId}");
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
         }
-        
-        string? protocol = null;
-        foreach (string supportedProtocol in SupportedProtocols)
-        {
-            if (context.WebSockets.WebSocketRequestedProtocols.Contains(supportedProtocol))
-            {
-                protocol = supportedProtocol;
-                break;
-            }
-        }
-        
-        if (string.IsNullOrEmpty(protocol))
+
+        if (!context.WebSockets.WebSocketRequestedProtocols.Contains(ProtocolOcpp16))
         {
             _logger.Error($"OCPPMiddleware => Unsupported protocol: {string.Join(", ", context.WebSockets.WebSocketRequestedProtocols)}");
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
         }
-        
-        using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync(protocol);
-        
-        var chargePointStatus = new ChargePointStatus
+
+        using var webSocket = await context.WebSockets.AcceptWebSocketAsync(ProtocolOcpp16);
+
+        var chargePoint = new ChargePointStatus
         {
             Id = chargePointId,
-            WebSocket = webSocket,
-            Protocol = protocol
+            Protocol = ProtocolOcpp16,
+            WebSocket = webSocket
         };
-        
-        // Add to connected charge points
-        if (!_chargePoints.TryAdd(chargePointId, chargePointStatus))
-        {
-            // Remove existing connection if present
-            if (_chargePoints.TryGetValue(chargePointId, out var existingStatus))
-            {
-                if (existingStatus.WebSocket.State == WebSocketState.Open)
-                {
-                    try
-                    {
-                        await existingStatus.WebSocket.CloseAsync(
-                            WebSocketCloseStatus.PolicyViolation,
-                            "New connection established",
-                            CancellationToken.None);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error($"OCPPMiddleware => Error closing existing connection: {ex.Message}");
-                    }
-                }
-                
-                _chargePoints.TryRemove(chargePointId, out _);
-                _chargePoints.TryAdd(chargePointId, chargePointStatus);
-            }
-        }
-        
+
+        // A reconnecting charger replaces its previous socket.
+        if (_chargePoints.TryGetValue(chargePointId, out var previous))
+            await CloseQuietly(previous, "New connection established");
+        _chargePoints[chargePointId] = chargePoint;
+
         _logger.Info($"OCPPMiddleware => Charge point connected: {chargePointId}");
-        
-        await HandleWebSocketConnection(chargePointStatus);
-    }
-    
-    private async Task HandleWebSocketConnection(ChargePointStatus chargePointStatus)
-    {
-        var buffer = new byte[4096];
-        var memStream = new MemoryStream();
-        
+
         try
         {
-            while (chargePointStatus.WebSocket.State == WebSocketState.Open)
-            {
-                WebSocketReceiveResult result;
-                try
-                {
-                    result = await chargePointStatus.WebSocket.ReceiveAsync(new ArraySegment<byte>(buffer),
-                        CancellationToken.None);
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"OCPPMiddleware => Error receiving WebSocket message: {e.Message}");
-                    break;
-                }
-                
-                if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    await chargePointStatus.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
-                    break;
-                }
-                
-                memStream.Write(buffer, 0, result.Count);
-                
-                if (result.EndOfMessage)
-                {
-                    var messageBytes = memStream.ToArray();
-                    memStream = new MemoryStream();
-                    
-                    var message = Encoding.UTF8.GetString(messageBytes);
-                    await ProcessOcppMessage(message, chargePointStatus);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"OCPPMiddleware => Error handling WebSocket: {ex.Message}");
+            await ReceiveLoop(chargePoint);
         }
         finally
         {
-            _chargePoints.TryRemove(chargePointStatus.Id, out _);
-            _logger.Info($"OCPPMiddleware => Charge point disconnected: {chargePointStatus.Id}");
+            // Only remove our own entry; a newer connection for the same id must survive.
+            _chargePoints.TryRemove(new KeyValuePair<string, ChargePointStatus>(chargePointId, chargePoint));
+            _logger.Info($"OCPPMiddleware => Charge point disconnected: {chargePointId}");
         }
     }
-    
-    private async Task ProcessOcppMessage(string message, ChargePointStatus chargePointStatus)
+
+    private async Task ReceiveLoop(ChargePointStatus chargePoint)
     {
+        var socket = chargePoint.WebSocket;
+        var buffer = new byte[4096];
+        var message = new MemoryStream();
+
+        while (socket.State == WebSocketState.Open)
+        {
+            WebSocketReceiveResult result;
+            try
+            {
+                result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"OCPPMiddleware => Error receiving from {chargePoint.Id}: {e.Message}");
+                return;
+            }
+
+            if (result.MessageType == WebSocketMessageType.Close)
+            {
+                await CloseQuietly(chargePoint, string.Empty);
+                return;
+            }
+
+            message.Write(buffer, 0, result.Count);
+            if (!result.EndOfMessage)
+                continue;
+
+            var text = Encoding.UTF8.GetString(message.GetBuffer(), 0, (int)message.Length);
+            message.SetLength(0);
+
+            await ProcessMessage(text, chargePoint);
+        }
+    }
+
+    private async Task ProcessMessage(string text, ChargePointStatus chargePoint)
+    {
+        _logger.Debug($"OCPPMiddleware => Received from {chargePoint.Id}: {text}");
+
+        if (text == "ping")
+            return; // some chargers send a text ping; nothing to answer
+
+        var match = MessageRegExp.Match(text);
+        if (!match.Success)
+        {
+            _logger.Error($"OCPPMiddleware => Invalid message format from {chargePoint.Id}: {text}");
+            return;
+        }
+
+        var message = new OCPPMessage
+        {
+            MessageType = match.Groups[1].Value,
+            UniqueId = match.Groups[2].Value,
+            Action = match.Groups[3].Value,
+            JsonPayload = match.Groups[4].Value
+        };
+
+        switch (message.MessageType)
+        {
+            case "2": // CALL from the charge point
+                await HandleCall(message, chargePoint);
+                break;
+
+            case "3": // CALLRESULT
+            case "4": // CALLERROR
+                // The gateway sends no CALLs to chargers yet, so there is nothing to correlate this with.
+                _logger.Warning($"OCPPMiddleware => Unexpected reply {message.UniqueId} from {chargePoint.Id}");
+                break;
+
+            default:
+                _logger.Error($"OCPPMiddleware => Unknown message type {message.MessageType} from {chargePoint.Id}");
+                break;
+        }
+    }
+
+    private async Task HandleCall(OCPPMessage request, ChargePointStatus chargePoint)
+    {
+        OCPPMessage response;
         try
         {
-            // Log incoming message
-            _logger.Debug($"OCPPMiddleware => Received message: {message}");
-            if (message == "ping")
-            {
-                return;
-            }
-            // Parse message
-            var match = MessageRegExp.Match(message);
-            if (!match.Success)
-            {
-                _logger.Error($"OCPPMiddleware => Invalid message format: {message}");
-                return;
-            }
-            
-            var messageType = match.Groups[1].Value;
-            var uniqueId = match.Groups[2].Value;
-            var action = match.Groups[3].Value;
-            var jsonPayload = match.Groups[4].Value;
-            
-            _logger.Info($"OCPPMiddleware => Message: Type={messageType}, ID={uniqueId}, Action={action}");
-            
-            var ocppMessage = new OCPPMessage
-            {
-                MessageType = messageType,
-                UniqueId = uniqueId,
-                Action = action,
-                JsonPayload = jsonPayload
-            };
-            
-            // Process message based on type
-            switch (messageType)
-            {
-                case "2": // Request from charge point
-                    await HandleChargePointRequest(ocppMessage, chargePointStatus);
-                    break;
-                    
-                case "3": // Response from charge point
-                case "4": // Error from charge point
-                    HandleChargePointResponse(ocppMessage);
-                    break;
-                    
-                default:
-                    _logger.Error($"OCPPMiddleware => Unknown message type: {messageType}");
-                    break;
-            }
+            // Scoped so the typed HttpClient is resolved per message rather than rooted for the process lifetime.
+            using var scope = _scopeFactory.CreateScope();
+            var controller = new ControllerOcpp16(
+                chargePoint,
+                _logger,
+                scope.ServiceProvider.GetRequiredService<ICpmsClient>(),
+                scope.ServiceProvider.GetRequiredService<IAuthorizationCache>());
+
+            response = await controller.ProcessRequest(request);
         }
         catch (Exception ex)
         {
-            _logger.Error($"OCPPMiddleware => Error processing message: {ex.Message}");
-        }
-    }
-    
-    private async Task HandleChargePointRequest(OCPPMessage request, ChargePointStatus chargePointStatus)
-    {
-        try
-        {
-            var controller = CreateController(chargePointStatus);
-            
-            var response = await controller.ProcessRequest(request);
-            
-            await SendOcppMessage(response, chargePointStatus);
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"OCPPMiddleware => Error handling request: {ex.Message}");
-            
-            var errorResponse = new OCPPMessage
+            _logger.Error($"OCPPMiddleware => Error handling {request.Action} from {chargePoint.Id}: {ex.Message}");
+            response = new OCPPMessage
             {
                 MessageType = "4",
                 UniqueId = request.UniqueId,
                 ErrorCode = ErrorCodes.InternalError,
                 ErrorDescription = "Internal error processing request"
             };
-            
-            await SendOcppMessage(errorResponse, chargePointStatus);
         }
+
+        await Send(response, chargePoint);
     }
-    
-    private void HandleChargePointResponse(OCPPMessage response)
+
+    private async Task Send(OCPPMessage message, ChargePointStatus chargePoint)
     {
-        if (_pendingRequests.TryRemove(response.UniqueId, out var taskCompletionSource))
+        var text = message.MessageType switch
         {
-            taskCompletionSource.SetResult(response);
-        }
-        else
+            "3" => $"[3,\"{message.UniqueId}\",{message.JsonPayload}]",
+            "4" => $"[4,\"{message.UniqueId}\",\"{message.ErrorCode}\",\"{message.ErrorDescription}\",{{}}]",
+            _ => throw new InvalidOperationException($"Cannot send message type {message.MessageType}")
+        };
+
+        _logger.Debug($"OCPPMiddleware => Sending to {chargePoint.Id}: {text}");
+
+        try
         {
-            _logger.Warning($"OCPPMiddleware => Received response with no matching request: {response.UniqueId}");
+            await chargePoint.WebSocket.SendAsync(
+                Encoding.UTF8.GetBytes(text),
+                WebSocketMessageType.Text,
+                endOfMessage: true,
+                CancellationToken.None);
         }
-    }
-    
-    private ControllerOcpp16 CreateController(ChargePointStatus chargePointStatus)
-    {
-        var cpmsClient = _serviceProvider.GetRequiredService<ICpmsClient>();
-        var authorizationCache = _serviceProvider.GetRequiredService<IAuthorizationCache>();
-        
-        return new ControllerOcpp16(
-            _configuration,
-            chargePointStatus,
-            _logger,
-            cpmsClient,
-            authorizationCache);
-    }
-    
-    private async Task SendOcppMessage(OCPPMessage message, ChargePointStatus chargePointStatus)
-    {
-        string messageText;
-        
-        switch (message.MessageType)
+        catch (Exception ex)
         {
-            case "2": // Request
-                messageText = $"[{message.MessageType},\"{message.UniqueId}\",\"{message.Action}\",{message.JsonPayload}]";
-                break;
-                
-            case "3": // Response
-                messageText = $"[{message.MessageType},\"{message.UniqueId}\",{message.JsonPayload}]";
-                break;
-                
-            case "4": // Error
-                messageText = $"[{message.MessageType},\"{message.UniqueId}\",\"{message.ErrorCode}\",\"{message.ErrorDescription}\",{{}}]";
-                break;
-                
-            default:
-                _logger.Error($"OCPPMiddleware => Invalid message type: {message.MessageType}");
-                return;
+            // The socket can die between receiving the CALL and answering it; the read loop ends on its own.
+            _logger.Error($"OCPPMiddleware => Error sending to {chargePoint.Id}: {ex.Message}");
         }
-        
-        _logger.Debug($"OCPPMiddleware => Sending message: {messageText}");
-        
-        var bytes = Encoding.UTF8.GetBytes(messageText);
-        await chargePointStatus.WebSocket.SendAsync(
-            new ArraySegment<byte>(bytes),
-            WebSocketMessageType.Text,
-            true,
-            CancellationToken.None);
     }
-    
-    private string? ExtractChargePointId(PathString path)
+
+    /// <summary>
+    /// Sends a close frame without waiting for the peer's answer. Covers both cases: acknowledging a
+    /// close the charger started (state CloseReceived) and closing a socket we are replacing (state Open).
+    /// </summary>
+    private async Task CloseQuietly(ChargePointStatus chargePoint, string reason)
     {
-        string?[] parts = path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries) ?? [];
-        return parts.Length > 1 ? parts[parts.Length - 1] : null;
+        var state = chargePoint.WebSocket.State;
+        if (state != WebSocketState.Open && state != WebSocketState.CloseReceived)
+            return;
+
+        try
+        {
+            await chargePoint.WebSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, reason, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"OCPPMiddleware => Error closing socket for {chargePoint.Id}: {ex.Message}");
+        }
     }
-    
 }
 
 public static class OcppMiddlewareExtensions
 {
-    public static IApplicationBuilder UseOCPPMiddleware(this IApplicationBuilder builder)
-    {
-        return builder.UseMiddleware<OcppMiddleware>();
-    }
+    public static IApplicationBuilder UseOcppMiddleware(this IApplicationBuilder builder) =>
+        builder.UseMiddleware<OcppMiddleware>();
 }

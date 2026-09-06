@@ -1,5 +1,5 @@
 using CPMS.API.Exceptions;
-using Marten;
+using CPMS.API.Repositories;
 using MediatR;
 
 namespace CPMS.API.Handlers.ChargeTag;
@@ -12,27 +12,19 @@ public class UpdateChargeTagCommand : IRequest
 
 public class UpdateChargeTagCommandHandler : IRequestHandler<UpdateChargeTagCommand>
 {
-    private readonly IDocumentSession _documentSession;
+    private readonly IAggregateRepository<Entities.ChargeTag> _chargeTags;
 
-    public UpdateChargeTagCommandHandler(IDocumentSession documentSession)
+    public UpdateChargeTagCommandHandler(IAggregateRepository<Entities.ChargeTag> chargeTags)
     {
-        _documentSession = documentSession;
+        _chargeTags = chargeTags;
     }
 
     public async Task Handle(UpdateChargeTagCommand request, CancellationToken cancellationToken)
     {
-        var chargeTag = await _documentSession.Events.AggregateStreamAsync<Entities.ChargeTag>(request.Id, token: cancellationToken);
-        
-        if (chargeTag == null)
-            throw new NotFoundException($"ChargeTag with ID {request.Id} not found.");
+        var chargeTag = await _chargeTags.LoadAsync(request.Id, cancellationToken)
+                        ?? throw new NotFoundException($"ChargeTag with ID {request.Id} not found.");
 
         chargeTag.UpdateTagId(request.TagId);
-
-        foreach (var @event in chargeTag.DomainEvents)
-        {
-            _documentSession.Events.Append(request.Id, @event);
-        }
-
-        await _documentSession.SaveChangesAsync(cancellationToken);
+        await _chargeTags.SaveAsync(chargeTag, cancellationToken);
     }
 }

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-interface AddressData {
+export interface AddressData {
     address: string;
     city: string;
     country: string;
@@ -19,7 +19,9 @@ interface Props {
     onSelect: (data: AddressData) => void;
 }
 
-const AddressAutocomplete: React.FC<Props> = ({ onSelect }) => {
+const MIN_QUERY_LENGTH = 3;
+
+function AddressAutocomplete({ onSelect }: Props) {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -28,24 +30,17 @@ const AddressAutocomplete: React.FC<Props> = ({ onSelect }) => {
     const timeoutRef = useRef<number>(0);
     const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
+    // Debounced Mapbox geocoding lookup; short queries are cleared in handleChange, not here.
     useEffect(() => {
-        if (!token || query.length < 3) {
-            setSuggestions([]);
-            setShowDropdown(false);
-            return;
-        }
+        if (!token || query.length < MIN_QUERY_LENGTH) return;
 
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-        }
-
+        clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(async () => {
             setIsLoading(true);
             try {
                 const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&types=address&limit=5`;
                 const response = await fetch(url);
                 const data = await response.json();
-
                 setSuggestions(data.features || []);
                 setShowDropdown(true);
             } catch (error) {
@@ -54,17 +49,22 @@ const AddressAutocomplete: React.FC<Props> = ({ onSelect }) => {
             }
             setIsLoading(false);
         }, 300);
+
+        return () => clearTimeout(timeoutRef.current);
     }, [query, token]);
+
+    const handleChange = (value: string) => {
+        setQuery(value);
+        if (value.length < MIN_QUERY_LENGTH) {
+            setSuggestions([]);
+            setShowDropdown(false);
+        }
+    };
 
     const handleSelect = (suggestion: Suggestion) => {
         const context = suggestion.context || [];
-        let city = '';
-        let country = '';
-
-        context.forEach(item => {
-            if (item.id.includes('place')) city = item.text;
-            if (item.id.includes('country')) country = item.text;
-        });
+        const city = context.find(item => item.id.includes('place'))?.text || '';
+        const country = context.find(item => item.id.includes('country'))?.text || '';
 
         let address = suggestion.place_name;
         if (city) address = address.replace(`, ${city}`, '');
@@ -75,30 +75,23 @@ const AddressAutocomplete: React.FC<Props> = ({ onSelect }) => {
 
         onSelect({
             address: address.trim(),
-            city: city || '',
-            country: country || '',
+            city,
+            country,
             latitude: suggestion.center[1],
-            longitude: suggestion.center[0]
+            longitude: suggestion.center[0],
         });
     };
 
     if (!token) {
-        return (
-            <input
-                type="text"
-                placeholder="Mapbox token required"
-                disabled
-            />
-        );
+        return <input type="text" placeholder="Mapbox token required" disabled />;
     }
-
 
     return (
         <div className="autocomplete">
             <input
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => handleChange(e.target.value)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 placeholder="Search for an address..."
                 autoComplete="off"
@@ -109,11 +102,7 @@ const AddressAutocomplete: React.FC<Props> = ({ onSelect }) => {
             {showDropdown && suggestions.length > 0 && (
                 <div className="suggestions">
                     {suggestions.map((suggestion) => (
-                        <div
-                            key={suggestion.id}
-                            onClick={() => handleSelect(suggestion)}
-                            className="suggestion"
-                        >
+                        <div key={suggestion.id} onClick={() => handleSelect(suggestion)} className="suggestion">
                             {suggestion.place_name}
                         </div>
                     ))}
@@ -121,6 +110,6 @@ const AddressAutocomplete: React.FC<Props> = ({ onSelect }) => {
             )}
         </div>
     );
-};
+}
 
 export default AddressAutocomplete;

@@ -20,6 +20,7 @@ public class ConnectorError
 
 public class ConnectorErrorLoggedEvent : DomainEventBase
 {
+    public Guid ErrorId { get; }
     public Guid ChargePointId { get; }
     public int ConnectorId { get; }
     public string ErrorCode { get; }
@@ -27,12 +28,14 @@ public class ConnectorErrorLoggedEvent : DomainEventBase
     public DateTime Timestamp { get; }
 
     public ConnectorErrorLoggedEvent(
+        Guid errorId,
         Guid chargePointId,
         int connectorId,
         string errorCode,
         string info,
         DateTime timestamp)
     {
+        ErrorId = errorId;
         ChargePointId = chargePointId;
         ConnectorId = connectorId;
         ErrorCode = errorCode;

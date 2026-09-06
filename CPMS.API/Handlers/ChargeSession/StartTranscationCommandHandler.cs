@@ -20,63 +20,64 @@ public class StartTransactionCommand : IRequest<StartTransactionResponse>
 
 public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCommand, StartTransactionResponse>
 {
-    private readonly IChargePointRepository _chargePointRepository;
-    private readonly IChargeSessionRepository _chargeSessionRepository;
+    private readonly IAggregateRepository<Entities.ChargePoint> _chargePoints;
+    private readonly IAggregateRepository<Entities.ChargeSession> _chargeSessions;
     private readonly IQuerySession _querySession;
-    private static readonly Random _random = new Random();
-    
+
     public StartTransactionCommandHandler(
-        IChargePointRepository chargePointRepository,
-        IChargeSessionRepository chargeSessionRepository,
+        IAggregateRepository<Entities.ChargePoint> chargePoints,
+        IAggregateRepository<Entities.ChargeSession> chargeSessions,
         IQuerySession querySession)
     {
-        _chargePointRepository = chargePointRepository;
-        _chargeSessionRepository = chargeSessionRepository;
+        _chargePoints = chargePoints;
+        _chargeSessions = chargeSessions;
         _querySession = querySession;
     }
-    
+
     public async Task<StartTransactionResponse> Handle(StartTransactionCommand command, CancellationToken cancellationToken)
     {
         var tag = await _querySession
             .Query<ChargeTagReadModel>()
             .FirstOrDefaultAsync(t => t.TagId == command.TagId, cancellationToken);
-            
+
         if (tag == null || tag.Blocked || (tag.ExpiryDate.HasValue && tag.ExpiryDate.Value <= DateTime.UtcNow))
             throw new BusinessRuleValidationException(new TagNotValidRule(command.TagId));
-        
-        var chargePoint = await _chargePointRepository.GetByOcppChargerIdAsync(command.OcppChargerId);
-        
+
+        var chargePointReadModel = await _querySession.Query<ChargePointReadModel>()
+            .FirstOrDefaultAsync(cp => cp.OcppChargerId == command.OcppChargerId, cancellationToken);
+        var chargePoint = chargePointReadModel == null
+            ? null
+            : await _chargePoints.LoadAsync(chargePointReadModel.Id, cancellationToken);
+
         if (chargePoint == null)
             throw new NotFoundException($"Charge point {command.OcppChargerId} not found");
-        
-        var connector = chargePoint.Connectors.FirstOrDefault(c => c.Id == command.ConnectorId);
-            
-        if (connector == null)
+
+        if (chargePoint.Connectors.All(c => c.Id != command.ConnectorId))
             throw new NotFoundException($"Connector {command.ConnectorId} not found on charge point {command.OcppChargerId}");
-        
-        var sessionId = Guid.NewGuid();
-        var transactionId = _random.Next(1, 1000000);
-        
+
+        // Known gap: no uniqueness check on the OCPP transaction id.
+        var transactionId = Random.Shared.Next(1, 1_000_000);
+
         var chargeSession = new Entities.ChargeSession(
-            sessionId,
+            Guid.NewGuid(),
             transactionId,
             chargePoint.Id,
             command.ConnectorId,
             command.TagId,
             command.MeterStart);
-            
-        await _chargeSessionRepository.AddAsync(chargeSession);
-        
-        chargePoint.UpdateConnectorStatus(connector.Id, "Charging");
-        await _chargePointRepository.UpdateAsync(chargePoint);
-        
+
+        await _chargeSessions.SaveAsync(chargeSession, cancellationToken);
+
+        chargePoint.UpdateConnectorStatus(command.ConnectorId, "Charging");
+        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
+
         return new StartTransactionResponse
         {
             TransactionId = transactionId,
             IdTagInfo = new IdTagInfo
             {
                 Status = AuthorizationStatus.Accepted,
-                ExpiryDate = (DateTimeOffset)tag.ExpiryDate
+                ExpiryDate = tag.ExpiryDate.HasValue ? new DateTimeOffset(tag.ExpiryDate.Value) : null
             }
         };
     }

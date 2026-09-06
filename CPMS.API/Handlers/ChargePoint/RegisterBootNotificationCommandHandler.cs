@@ -1,63 +1,47 @@
+using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.Core.Models.Requests;
+using Marten;
 using MediatR;
 
 namespace CPMS.API.Handlers.ChargePoint;
 
-public class BootNotificationCommand : IRequest<bool>
-{
-    public string OcppChargerId { get; set; }
-    public string Protocol { get; set; }
-    public string ChargePointVendor { get; set; }
-    public string ChargePointModel { get; set; }
-    public string ChargePointSerialNumber { get; set; }
-    public string ChargeBoxSerialNumber { get; set; }
-    public string FirmwareVersion { get; set; }
-    public string Iccid { get; set; }
-    public string Imsi { get; set; }
-    public string MeterType { get; set; }
-    public string MeterSerialNumber { get; set; }
-
-    public BootNotificationCommand(BootNotificationRequest bootNotificationRequest)
-    {
-        OcppChargerId = bootNotificationRequest.OcppChargerId;
-        Protocol = bootNotificationRequest.Protocol;
-        ChargePointVendor = bootNotificationRequest.ChargePointVendor;
-        ChargePointModel = bootNotificationRequest.ChargePointModel;
-        ChargePointSerialNumber = bootNotificationRequest.ChargePointSerialNumber;
-        ChargeBoxSerialNumber = bootNotificationRequest.ChargeBoxSerialNumber;
-        FirmwareVersion = bootNotificationRequest.FirmwareVersion;
-        Iccid = bootNotificationRequest.Iccid;
-        Imsi = bootNotificationRequest.Imsi;
-        MeterType = bootNotificationRequest.MeterType;
-        MeterSerialNumber = bootNotificationRequest.MeterSerialNumber;
-    }
-}
+/// <summary>Returns false when the charger is not registered; the proxy then rejects the boot.</summary>
+public record BootNotificationCommand(BootNotificationRequest Request) : IRequest<bool>;
 
 public class RegisterBootNotificationCommandHandler : IRequestHandler<BootNotificationCommand, bool>
 {
-    private readonly IChargePointRepository _chargePointRepository;
-        
-    public RegisterBootNotificationCommandHandler(IChargePointRepository chargePointRepository)
+    private readonly IAggregateRepository<Entities.ChargePoint> _chargePoints;
+    private readonly IQuerySession _querySession;
+
+    public RegisterBootNotificationCommandHandler(
+        IAggregateRepository<Entities.ChargePoint> chargePoints,
+        IQuerySession querySession)
     {
-        _chargePointRepository = chargePointRepository;
+        _chargePoints = chargePoints;
+        _querySession = querySession;
     }
-    
-    public async Task<bool> Handle(BootNotificationCommand request, CancellationToken cancellationToken)
+
+    public async Task<bool> Handle(BootNotificationCommand command, CancellationToken cancellationToken)
     {
-        var chargePoint = await _chargePointRepository.GetByOcppChargerIdAsync(request.OcppChargerId);
-            
+        var request = command.Request;
+
+        var readModel = await _querySession.Query<ChargePointReadModel>()
+            .FirstOrDefaultAsync(cp => cp.OcppChargerId == request.OcppChargerId, cancellationToken);
+        if (readModel == null)
+            return false;
+
+        var chargePoint = await _chargePoints.LoadAsync(readModel.Id, cancellationToken);
         if (chargePoint == null)
             return false;
-            
+
         chargePoint.RegisterBoot(
             request.ChargePointSerialNumber,
             request.ChargePointModel,
             request.ChargePointVendor,
             request.FirmwareVersion);
-                
-        await _chargePointRepository.UpdateAsync(chargePoint);
-            
+
+        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
         return true;
     }
 }

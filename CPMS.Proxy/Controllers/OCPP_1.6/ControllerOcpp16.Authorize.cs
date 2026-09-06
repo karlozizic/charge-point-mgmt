@@ -1,4 +1,4 @@
-using CPMS.Core.Models.OCPP_1._6;
+﻿using CPMS.Core.Models.OCPP_1._6;
 using CPMS.Core.Models.Requests;
 using CPMS.Core.Models.Responses;
 using CPMS.Proxy.Models;
@@ -44,7 +44,7 @@ public partial class ControllerOcpp16
         catch (Exception exp)
         {
             Logger.Error($"Authorize => Exception: {exp.Message}");
-            errorCode = ErrorCodes.FormationViolation;
+            errorCode = ErrorCodes.InternalError;
         }
         
         return errorCode;

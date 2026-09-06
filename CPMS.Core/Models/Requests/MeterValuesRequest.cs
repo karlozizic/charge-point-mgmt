@@ -1,6 +1,4 @@
-using MediatR;
-
-namespace CPMS.Core.Models.Requests;
+﻿namespace CPMS.Core.Models.Requests;
 
 public class MeterValuesRequest : BaseMessage
 {

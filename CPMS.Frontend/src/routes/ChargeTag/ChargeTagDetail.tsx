@@ -1,122 +1,76 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chargeTagsApi } from '../../api/services/chargeTags.ts';
-import type { UpdateChargeTagCommand, UpdateChargeTagExpiryCommand } from '../../types/chargeTag.ts';
+import { chargeTagsApi } from '../../api/services/chargeTags';
+import Modal from '../../components/common/Modal';
 
 function ChargeTagDetail() {
     const { id } = useParams<{ id: string }>();
-    const nav = useNavigate();
-    const qc = useQueryClient();
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [showExpiryModal, setShowExpiryModal] = useState(false);
-
     const [tagId, setTagId] = useState('');
-    const [expiryDate, setExpiryDate] = useState<string | null>(null);
+    const [expiryDate, setExpiryDate] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
 
     const { data: tag, isLoading } = useQuery({
         queryKey: ['chargeTag', id],
-        queryFn: () => id ? chargeTagsApi.getById(id) : Promise.reject('No ID provided'),
-        enabled: !!id
+        queryFn: () => chargeTagsApi.getById(id!),
+        enabled: !!id,
     });
 
+    const invalidate = () => {
+        queryClient.invalidateQueries({ queryKey: ['chargeTag', id] });
+        queryClient.invalidateQueries({ queryKey: ['chargeTags'] });
+    };
+
     const updateTag = useMutation({
-        mutationFn: (command: UpdateChargeTagCommand) =>
-            chargeTagsApi.update(id || '', command),
+        mutationFn: (newTagId: string) =>
+            chargeTagsApi.update(id!, { id: id!, tagId: newTagId, expiryDate: tag?.expiryDate || null }),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['chargeTag', id] });
-            qc.invalidateQueries({ queryKey: ['chargeTags'] });
+            invalidate();
             setShowEditModal(false);
         },
-        onError: (err: any) => {
-            console.error('Error updating tag:', err);
-            setErrorMsg(`Failed to update tag: ${err.message || 'Unknown error'}`);
-        }
+        onError: (err: Error) => setErrorMsg(`Failed to update tag: ${err.message || 'Unknown error'}`),
     });
 
     const updateExpiry = useMutation({
-        mutationFn: (command: UpdateChargeTagExpiryCommand) =>
-            chargeTagsApi.updateExpiry(id || '', command),
+        mutationFn: (newExpiry: string | null) => chargeTagsApi.updateExpiry(id!, { id: id!, expiryDate: newExpiry }),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['chargeTag', id] });
-            qc.invalidateQueries({ queryKey: ['chargeTags'] });
+            invalidate();
             setShowExpiryModal(false);
         },
-        onError: (err: any) => {
-            console.error('Error updating expiry date:', err);
-            setErrorMsg(`Failed to update expiry date: ${err.message || 'Unknown error'}`);
-        }
+        onError: (err: Error) => setErrorMsg(`Failed to update expiry date: ${err.message || 'Unknown error'}`),
     });
 
-    const blockTag = useMutation({
-        mutationFn: (id: string) => chargeTagsApi.block(id),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['chargeTag', id] });
-            qc.invalidateQueries({ queryKey: ['chargeTags'] });
-        }
-    });
-
-    const unblockTag = useMutation({
-        mutationFn: (id: string) => chargeTagsApi.unblock(id),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['chargeTag', id] });
-            qc.invalidateQueries({ queryKey: ['chargeTags'] });
-        }
-    });
+    const blockTag = useMutation({ mutationFn: chargeTagsApi.block, onSuccess: invalidate });
+    const unblockTag = useMutation({ mutationFn: chargeTagsApi.unblock, onSuccess: invalidate });
 
     function handleUpdateTag(e: React.FormEvent) {
         e.preventDefault();
-
         if (!tagId) {
             setErrorMsg('Tag ID is required');
             return;
         }
-
-        if (id) {
-            updateTag.mutate({
-                id,
-                tagId,
-                expiryDate: tag?.expiryDate || null
-            });
-        }
+        updateTag.mutate(tagId);
     }
 
     function handleUpdateExpiry(e: React.FormEvent) {
         e.preventDefault();
-
-        if (id) {
-            updateExpiry.mutate({
-                id,
-                expiryDate: expiryDate
-            });
-        }
+        updateExpiry.mutate(expiryDate || null);
     }
 
-    function handleToggleBlock() {
-        if (id && tag) {
-            if (tag.blocked) {
-                unblockTag.mutate(id);
-            } else {
-                blockTag.mutate(id);
-            }
-        }
-    }
-
-    function showEditTagModal() {
+    function openEditModal() {
         setTagId(tag?.tagId || '');
+        setErrorMsg('');
         setShowEditModal(true);
     }
 
-    function showExpiryDateModal() {
-        if (tag?.expiryDate) {
-            const date = new Date(tag.expiryDate);
-            const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
-            setExpiryDate(formattedDate);
-        } else {
-            setExpiryDate(null);
-        }
+    function openExpiryModal() {
+        setExpiryDate(tag?.expiryDate ? new Date(tag.expiryDate).toISOString().split('T')[0] : '');
+        setErrorMsg('');
         setShowExpiryModal(true);
     }
 
@@ -125,9 +79,7 @@ function ChargeTagDetail() {
 
     return (
         <div className="charge-tag-detail">
-            <button className="btn btn-gray back" onClick={() => nav(-1)}>
-                Back to List
-            </button>
+            <button className="btn btn-gray back" onClick={() => navigate(-1)}>Back to List</button>
 
             <h1>Tag Details</h1>
 
@@ -135,43 +87,28 @@ function ChargeTagDetail() {
                 <div className="card-header">
                     <h2>{tag.tagId}</h2>
                 </div>
-
                 <div className="card-body">
                     <div className="info-grid">
-                        <div className="info-item">
-                            <span className="label">ID:</span>
-                            <span className="value">{tag.id}</span>
-                        </div>
-                        <div className="info-item">
-                            <span className="label">Tag ID:</span>
-                            <span className="value">{tag.tagId}</span>
-                        </div>
+                        <div className="info-item"><span className="label">ID:</span><span className="value">{tag.id}</span></div>
+                        <div className="info-item"><span className="label">Tag ID:</span><span className="value">{tag.tagId}</span></div>
                         <div className="info-item">
                             <span className="label">Expiry Date:</span>
-                            <span className="value">
-                {tag.expiryDate
-                    ? new Date(tag.expiryDate).toLocaleDateString()
-                    : 'No expiry date'}
-              </span>
+                            <span className="value">{tag.expiryDate ? new Date(tag.expiryDate).toLocaleDateString() : 'No expiry date'}</span>
                         </div>
                         <div className="info-item">
                             <span className="label">Status:</span>
                             <span className="value" style={{ color: tag.blocked ? 'red' : 'green', fontWeight: 'bold' }}>
-                {tag.blocked ? 'Blocked' : 'Active'}
-              </span>
+                                {tag.blocked ? 'Blocked' : 'Active'}
+                            </span>
                         </div>
                     </div>
 
                     <div className="actions">
-                        <button className="btn" onClick={showEditTagModal}>
-                            Edit Tag ID
-                        </button>
-                        <button className="btn btn-gray" onClick={showExpiryDateModal}>
-                            Update Expiry Date
-                        </button>
+                        <button className="btn" onClick={openEditModal}>Edit Tag ID</button>
+                        <button className="btn btn-gray" onClick={openExpiryModal}>Update Expiry Date</button>
                         <button
-                            className={tag.blocked ? "btn" : "btn btn-red"}
-                            onClick={handleToggleBlock}
+                            className={tag.blocked ? 'btn' : 'btn btn-red'}
+                            onClick={() => (tag.blocked ? unblockTag : blockTag).mutate(tag.id)}
                             disabled={blockTag.isPending || unblockTag.isPending}
                         >
                             {tag.blocked ? 'Unblock Tag' : 'Block Tag'}
@@ -180,90 +117,39 @@ function ChargeTagDetail() {
                 </div>
             </div>
 
-            {/* Edit Tag ID Modal */}
             {showEditModal && (
-                <div className="overlay">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h2>Edit Tag ID</h2>
-                            <button className="close" onClick={() => setShowEditModal(false)}>&times;</button>
+                <Modal title="Edit Tag ID" onClose={() => setShowEditModal(false)} error={errorMsg}>
+                    <form onSubmit={handleUpdateTag}>
+                        <div className="form-group">
+                            <label htmlFor="tagId">Tag ID</label>
+                            <input type="text" id="tagId" value={tagId} onChange={(e) => setTagId(e.target.value)} required />
                         </div>
-                        <div className="modal-body">
-                            {errorMsg && <div className="error-msg">{errorMsg}</div>}
-                            <form onSubmit={handleUpdateTag}>
-                                <div className="form-group">
-                                    <label htmlFor="tagId">Tag ID</label>
-                                    <input
-                                        type="text"
-                                        id="tagId"
-                                        value={tagId}
-                                        onChange={(e) => setTagId(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-buttons">
-                                    <button
-                                        type="button"
-                                        className="btn btn-gray"
-                                        onClick={() => setShowEditModal(false)}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="btn"
-                                        disabled={updateTag.isPending}
-                                    >
-                                        {updateTag.isPending ? 'Saving...' : 'Save'}
-                                    </button>
-                                </div>
-                            </form>
+                        <div className="form-buttons">
+                            <button type="button" className="btn btn-gray" onClick={() => setShowEditModal(false)}>Cancel</button>
+                            <button type="submit" className="btn" disabled={updateTag.isPending}>
+                                {updateTag.isPending ? 'Saving...' : 'Save'}
+                            </button>
                         </div>
-                    </div>
-                </div>
+                    </form>
+                </Modal>
             )}
 
-            {/* Update Expiry Date Modal */}
             {showExpiryModal && (
-                <div className="overlay">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h2>Update Expiry Date</h2>
-                            <button className="close" onClick={() => setShowExpiryModal(false)}>&times;</button>
+                <Modal title="Update Expiry Date" onClose={() => setShowExpiryModal(false)} error={errorMsg}>
+                    <form onSubmit={handleUpdateExpiry}>
+                        <div className="form-group">
+                            <label htmlFor="expiryDate">Expiry Date</label>
+                            <input type="date" id="expiryDate" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+                            <p className="helper-text">Leave empty to remove expiry date</p>
                         </div>
-                        <div className="modal-body">
-                            {errorMsg && <div className="error-msg">{errorMsg}</div>}
-                            <form onSubmit={handleUpdateExpiry}>
-                                <div className="form-group">
-                                    <label htmlFor="expiryDate">Expiry Date</label>
-                                    <input
-                                        type="date"
-                                        id="expiryDate"
-                                        value={expiryDate || ''}
-                                        onChange={(e) => setExpiryDate(e.target.value || null)}
-                                    />
-                                    <p className="helper-text">Leave empty to remove expiry date</p>
-                                </div>
-                                <div className="form-buttons">
-                                    <button
-                                        type="button"
-                                        className="btn btn-gray"
-                                        onClick={() => setShowExpiryModal(false)}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="btn"
-                                        disabled={updateExpiry.isPending}
-                                    >
-                                        {updateExpiry.isPending ? 'Saving...' : 'Save'}
-                                    </button>
-                                </div>
-                            </form>
+                        <div className="form-buttons">
+                            <button type="button" className="btn btn-gray" onClick={() => setShowExpiryModal(false)}>Cancel</button>
+                            <button type="submit" className="btn" disabled={updateExpiry.isPending}>
+                                {updateExpiry.isPending ? 'Saving...' : 'Save'}
+                            </button>
                         </div>
-                    </div>
-                </div>
+                    </form>
+                </Modal>
             )}
         </div>
     );

@@ -2,112 +2,69 @@ using CPMS.BuildingBlocks.Infrastructure.Logger;
 using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
 using CPMS.Proxy.Services;
-using Microsoft.Extensions.Configuration;
 
 namespace CPMS.Proxy.Controllers.OCPP_1._6;
 
-public partial class ControllerOcpp16 : BaseController
+/// <summary>
+/// Handles one OCPP 1.6 CALL from a connected charger. Each action lives in its own partial file and
+/// returns an error code (CALLERROR) or null (CALLRESULT with the payload it wrote to msgOut).
+/// </summary>
+public partial class ControllerOcpp16
 {
     private readonly ICpmsClient _cpmsClient;
     private readonly IAuthorizationCache _authorizationCache;
-    
-    public ControllerOcpp16(IConfiguration config, 
+
+    private ChargePointStatus ChargePointStatus { get; }
+    private ILoggerService Logger { get; }
+
+    public ControllerOcpp16(
         ChargePointStatus chargePointStatus,
         ILoggerService logger,
         ICpmsClient cpmsClient,
-        IAuthorizationCache authorizationCache) :
-        base(config, chargePointStatus, logger)
+        IAuthorizationCache authorizationCache)
     {
+        ChargePointStatus = chargePointStatus;
+        Logger = logger;
         _cpmsClient = cpmsClient;
         _authorizationCache = authorizationCache;
     }
 
-    public override async Task<OCPPMessage> ProcessRequest(OCPPMessage msgIn)
+    public async Task<OCPPMessage> ProcessRequest(OCPPMessage msgIn)
     {
-        OCPPMessage msgOut = new OCPPMessage
+        var msgOut = new OCPPMessage
         {
             MessageType = "3",
             UniqueId = msgIn.UniqueId
         };
 
-        string? errorCode = null;
-        
-        Logger.Info($"Received message: Action={msgIn.Action}, UniqueId={msgIn.UniqueId}, MessageType={msgIn.MessageType}");
+        Logger.Info($"Received {msgIn.Action} (UniqueId={msgIn.UniqueId}) from {ChargePointStatus.Id}");
 
-        switch (msgIn.Action)
+        var errorCode = msgIn.Action switch
         {
-            case "BootNotification":
-                errorCode = await HandleBootNotification(msgIn, msgOut);
-                break;
-
-            case "Heartbeat":
-                errorCode = HandleHeartBeat(msgIn, msgOut);
-                break;
-
-            case "Authorize":
-                errorCode = await HandleAuthorize(msgIn, msgOut);
-                break;
-
-            case "StartTransaction":
-                errorCode = await HandleStartTransaction(msgIn, msgOut);
-                break;
-
-            case "StopTransaction":
-                errorCode = await HandleStopTransaction(msgIn, msgOut);
-                break;
-
-            case "MeterValues":
-                errorCode = await HandleMeterValues(msgIn, msgOut);
-                break;
-
-            case "StatusNotification":
-                errorCode = await HandleStatusNotification(msgIn, msgOut);
-                break;
-
-            case "DataTransfer":
-                errorCode = HandleDataTransfer(msgIn, msgOut);
-                break;
-            
-            default:
-                errorCode = ErrorCodes.NotSupported;
-                Logger.Error($"Unknown action: Action={msgIn.Action}");
-                break;
-        }
+            "BootNotification" => await HandleBootNotification(msgIn, msgOut),
+            "Heartbeat" => HandleHeartBeat(msgIn, msgOut),
+            "Authorize" => await HandleAuthorize(msgIn, msgOut),
+            "StartTransaction" => await HandleStartTransaction(msgIn, msgOut),
+            "StopTransaction" => await HandleStopTransaction(msgIn, msgOut),
+            "MeterValues" => await HandleMeterValues(msgIn, msgOut),
+            "StatusNotification" => await HandleStatusNotification(msgIn, msgOut),
+            "DataTransfer" => HandleDataTransfer(msgIn, msgOut),
+            _ => NotSupported(msgIn.Action)
+        };
 
         if (!string.IsNullOrEmpty(errorCode))
         {
-            // Inavlid message type => return type "4" (CALLERROR)
             msgOut.MessageType = "4";
             msgOut.ErrorCode = errorCode;
-            Logger.Info($"Return error code messge: ErrorCode={errorCode}");
+            Logger.Info($"Returning CALLERROR {errorCode} for {msgIn.Action}");
         }
 
         return msgOut;
     }
 
-    public override async Task ProcessAnswer(OCPPMessage msgIn, OCPPMessage msgOut)
+    private string NotSupported(string action)
     {
-        switch (msgOut.Action)
-        {
-            case "Reset":
-                await HandleReset(msgIn, msgOut);
-                break;
-
-            case "UnlockConnector":
-                await HandleUnlockConnector(msgIn, msgOut);
-                break;
-                
-            case "SetChargingProfile":
-                await HandleSetChargingProfile(msgIn, msgOut);
-                break;
-                
-            case "ClearChargingProfile" :
-                await HandleClearChargingProfile(msgIn, msgOut);
-                break;
-                
-            default:
-                Logger.Error($"Unknown action: Action={msgOut.Action}");
-                break;
-        }
+        Logger.Warning($"Unsupported action: {action}");
+        return ErrorCodes.NotSupported;
     }
 }

@@ -4,6 +4,7 @@ namespace CPMS.API.Events.Billing;
 
 public class SessionBillingCalculatedEvent : DomainEventBase
 {
+    public Guid BillingId { get; }
     public Guid SessionId { get; }
     public Guid PricingGroupId { get; }
     public decimal BaseAmount { get; }
@@ -11,8 +12,9 @@ public class SessionBillingCalculatedEvent : DomainEventBase
     public decimal TotalAmount { get; }
     public string Currency { get; }
     public DateTime CalculatedAt { get; }
-    
+
     public SessionBillingCalculatedEvent(
+        Guid billingId,
         Guid sessionId,
         Guid pricingGroupId,
         decimal baseAmount,
@@ -21,6 +23,7 @@ public class SessionBillingCalculatedEvent : DomainEventBase
         string currency,
         DateTime calculatedAt)
     {
+        BillingId = billingId;
         SessionId = sessionId;
         PricingGroupId = pricingGroupId;
         BaseAmount = baseAmount;

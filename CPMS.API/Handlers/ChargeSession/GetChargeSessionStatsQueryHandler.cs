@@ -5,57 +5,56 @@ using MediatR;
 
 namespace CPMS.API.Handlers.ChargeSession;
 
- public class GetChargeSessionStatsQuery : IRequest<ChargeSessionStatsDto>
+public class GetChargeSessionStatsQuery : IRequest<ChargeSessionStatsDto>
+{
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+    public string? ChargePointId { get; set; }
+}
+
+/// <summary>
+/// Materialises every matching session and aggregates in memory. Known bottleneck; the aggregation
+/// belongs in SQL.
+/// </summary>
+public class GetChargeSessionStatsQueryHandler : IRequestHandler<GetChargeSessionStatsQuery, ChargeSessionStatsDto>
+{
+    private readonly IQuerySession _querySession;
+
+    public GetChargeSessionStatsQueryHandler(IQuerySession querySession)
     {
-        public DateTime? FromDate { get; set; }
-        public DateTime? ToDate { get; set; }
-        public string? ChargePointId { get; set; }
+        _querySession = querySession;
     }
 
-    public class GetChargeSessionStatsQueryHandler : IRequestHandler<GetChargeSessionStatsQuery, ChargeSessionStatsDto>
+    public async Task<ChargeSessionStatsDto> Handle(GetChargeSessionStatsQuery request, CancellationToken cancellationToken)
     {
-        private readonly IQuerySession _querySession;
+        IQueryable<ChargeSessionReadModel> query = _querySession.Query<ChargeSessionReadModel>();
 
-        public GetChargeSessionStatsQueryHandler(IQuerySession querySession)
+        if (request.FromDate.HasValue)
+            query = query.Where(s => s.StartTime >= request.FromDate.Value);
+
+        if (request.ToDate.HasValue)
+            query = query.Where(s => s.StartTime <= request.ToDate.Value);
+
+        if (!string.IsNullOrEmpty(request.ChargePointId))
+            query = query.Where(s => s.ChargePointId == request.ChargePointId);
+
+        var sessions = await query.ToListAsync(cancellationToken);
+
+        var completed = sessions.Where(s => s.StopTime.HasValue).ToList();
+        var withEnergy = sessions.Where(s => s.EnergyDeliveredKWh > 0).ToList();
+
+        return new ChargeSessionStatsDto
         {
-            _querySession = querySession;
-        }
-
-        public async Task<ChargeSessionStatsDto> Handle(GetChargeSessionStatsQuery request, CancellationToken cancellationToken)
-        {
-            IQueryable<ChargeSessionReadModel> query = _querySession.Query<ChargeSessionReadModel>();
-
-            if (request.FromDate.HasValue)
-            {
-                query = query.Where(s => s.StartTime >= request.FromDate.Value);
-            }
-
-            if (request.ToDate.HasValue)
-            {
-                query = query.Where(s => s.StartTime <= request.ToDate.Value);
-            }
-
-            if (!string.IsNullOrEmpty(request.ChargePointId))
-            {
-                query = query.Where(s => s.ChargePointId == request.ChargePointId);
-            }
-
-            var sessions = await query.ToListAsync(cancellationToken);
-
-            return new ChargeSessionStatsDto
-            {
-                TotalSessions = sessions.Count,
-                ActiveSessions = sessions.Count(s => s.Status == nameof(SessionStatus.Started)),
-                CompletedSessions = sessions.Count(s => s.Status == nameof(SessionStatus.Stopped)),
-                TotalEnergyDelivered = sessions.Where(s => s.EnergyDeliveredKWh.HasValue)
-                                              .Sum(s => s.EnergyDeliveredKWh.Value),
-                AverageSessionDuration = sessions.Where(s => s.StopTime.HasValue)
-                                               .Select(s => s.StopTime!.Value - s.StartTime)
-                                               .DefaultIfEmpty()
-                                               .Average(ts => ts.TotalMinutes),
-                AverageEnergyPerSession = sessions.Where(s => s.EnergyDeliveredKWh.HasValue && s.EnergyDeliveredKWh > 0)
-                                                 .DefaultIfEmpty()
-                                                 .Average(s => s.EnergyDeliveredKWh ?? 0)
-            };
-        }
+            TotalSessions = sessions.Count,
+            ActiveSessions = sessions.Count(s => s.Status == nameof(SessionStatus.Started)),
+            CompletedSessions = sessions.Count(s => s.Status == nameof(SessionStatus.Stopped)),
+            TotalEnergyDelivered = sessions.Sum(s => s.EnergyDeliveredKWh ?? 0),
+            AverageSessionDuration = completed.Count == 0
+                ? 0
+                : completed.Average(s => (s.StopTime!.Value - s.StartTime).TotalMinutes),
+            AverageEnergyPerSession = withEnergy.Count == 0
+                ? 0
+                : withEnergy.Average(s => s.EnergyDeliveredKWh!.Value)
+        };
     }
+}

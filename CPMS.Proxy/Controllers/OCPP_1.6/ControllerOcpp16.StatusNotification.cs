@@ -1,4 +1,4 @@
-﻿using CPMS.Proxy.Models;
+using CPMS.Proxy.Models;
 using CPMS.Proxy.OCPP_1._6;
 using Newtonsoft.Json;
 using StatusNotificationRequest = CPMS.Core.Models.Requests.StatusNotificationRequest;
@@ -9,43 +9,32 @@ public partial class ControllerOcpp16
 {
     private async Task<string?> HandleStatusNotification(OCPPMessage msgIn, OCPPMessage msgOut)
     {
-        string? errorCode = null;
-        bool msgWritten = false;
-
         try
         {
-            Proxy.OCPP_1._6.StatusNotificationRequest statusNotificationRequest =
-                JsonConvert.DeserializeObject<Proxy.OCPP_1._6.StatusNotificationRequest>(msgIn.JsonPayload)
-                ?? throw new InvalidOperationException();
+            var status = JsonConvert.DeserializeObject<Proxy.OCPP_1._6.StatusNotificationRequest>(msgIn.JsonPayload)
+                         ?? throw new InvalidOperationException("Empty StatusNotification payload");
 
-            if (statusNotificationRequest.ConnectorId > 0)
+            // Connector 0 is the charge point itself; only connector statuses are forwarded.
+            if (status.ConnectorId > 0)
             {
-                StatusNotificationRequest statusNotificationChargerRequest =
-                    new StatusNotificationRequest
-                    {
-                        OcppChargerId = ChargePointStatus.Id,
-                        OcppEvseId = 0,
-                        OcppConnectorId = statusNotificationRequest.ConnectorId,
-                        LastStatus = statusNotificationRequest.Status.ToString(),
-                        LastStatusTime = (statusNotificationRequest.Timestamp ?? DateTimeOffset.UtcNow).DateTime,
-                        Protocol = ChargePointStatus.Protocol
-                    };
-
-                await _cpmsClient.StatusNotification(statusNotificationChargerRequest);
-            }
-            else
-            {
-                Logger.Info("Status notification message with connector id 0");
+                await _cpmsClient.StatusNotification(new StatusNotificationRequest
+                {
+                    OcppChargerId = ChargePointStatus.Id,
+                    Protocol = ChargePointStatus.Protocol,
+                    OcppEvseId = 0,
+                    OcppConnectorId = status.ConnectorId,
+                    LastStatus = status.Status.ToString(),
+                    LastStatusTime = (status.Timestamp ?? DateTimeOffset.UtcNow).UtcDateTime
+                });
             }
 
             msgOut.JsonPayload = JsonConvert.SerializeObject(new Proxy.OCPP_1._6.StatusNotificationResponse());
+            return null;
         }
         catch (Exception exp)
         {
-            Logger.Error($"ChargePoint={ChargePointStatus.Id} / Exception: {exp.Message}", exp);
-            errorCode = ErrorCodes.InternalError;
+            Logger.Error($"StatusNotification => Exception: {exp.Message}", exp);
+            return ErrorCodes.InternalError;
         }
-        
-        return errorCode;
     }
 }
