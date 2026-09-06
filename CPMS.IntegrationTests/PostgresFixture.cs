@@ -1,5 +1,4 @@
-using CPMS.API.Projections;
-using JasperFx.Events.Projections;
+using CPMS.API.Infrastructure;
 using Marten;
 using Testcontainers.PostgreSql;
 
@@ -19,14 +18,14 @@ public class PostgresFixture : IAsyncLifetime
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 
-    /// <summary>Marten configured the way <c>Program.cs</c> configures it, in an isolated schema.</summary>
+    /// <summary>
+    /// A store configured by the same code path as the application, in an isolated schema.
+    /// Registering the projections here instead would let the test store drift from Program.cs.
+    /// </summary>
     public DocumentStore NewStore() => DocumentStore.For(options =>
     {
-        options.Connection(_container.GetConnectionString());
+        MartenConfiguration.Configure(options, _container.GetConnectionString());
         options.DatabaseSchemaName = "test_" + Guid.NewGuid().ToString("n")[..8];
-        options.UseNewtonsoftForSerialization();
-
-        options.Projections.Add<ChargePointProjection>(ProjectionLifecycle.Inline);
     });
 }
 

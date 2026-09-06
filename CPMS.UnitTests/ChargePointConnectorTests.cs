@@ -10,8 +10,11 @@ public class ChargePointConnectorTests
     private static ChargePoint NewChargePoint() =>
         new(Guid.NewGuid(), "CP-1", Guid.NewGuid(), 22.0, 0.0);
 
+    // This pins that the event and the state agree. It does not pin replay: both values are read
+    // microseconds apart, and the Windows clock tick is coarse enough that a second DateTime.UtcNow
+    // call usually returns the same ticks. ChargePointReplayTests holds the replay guarantee.
     [Fact]
-    public void AddConnector_takes_the_status_time_from_the_event()
+    public void AddConnector_records_the_same_time_on_the_event_and_the_connector()
     {
         var chargePoint = NewChargePoint();
         chargePoint.ClearDomainEvents();

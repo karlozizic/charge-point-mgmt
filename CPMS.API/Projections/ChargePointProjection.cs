@@ -22,7 +22,9 @@ public class ChargePointProjection : SingleStreamProjection<ChargePointReadModel
                 ConnectorId = @event.ConnectorId,
                 Name = @event.ConnectorName,
                 Status = "Available",
-                LastStatusTime = @event.AddedAt
+                // Events written before AddedAt existed deserialize to default. Leave those null
+                // rather than showing year 1 as if it were a real reading.
+                LastStatusTime = @event.AddedAt == default ? null : @event.AddedAt
             });
             return model;
         });

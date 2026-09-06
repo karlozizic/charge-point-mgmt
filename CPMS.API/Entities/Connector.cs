@@ -17,7 +17,7 @@ public class Connector : Entity
     {
     }
 
-    public Connector(int id, string name, DateTime addedAt)
+    public Connector(int id, string name, DateTime? addedAt)
     {
         Id = id;
         Name = name;

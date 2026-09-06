@@ -54,7 +54,11 @@ public class ChargePoint : Entity, IAggregateRoot
 
     private void Apply(ConnectorAddedEvent @event)
     {
-        _connectors.Add(new Connector(@event.ConnectorId, @event.ConnectorName, @event.AddedAt));
+        // Streams written before AddedAt existed carry no value, so it deserializes to default.
+        // "Unknown" is honest; year 1 would look like data.
+        var addedAt = @event.AddedAt == default ? (DateTime?)null : @event.AddedAt;
+
+        _connectors.Add(new Connector(@event.ConnectorId, @event.ConnectorName, addedAt));
     }
 
     public void UpdateConnectorStatus(int connectorId, string status)
