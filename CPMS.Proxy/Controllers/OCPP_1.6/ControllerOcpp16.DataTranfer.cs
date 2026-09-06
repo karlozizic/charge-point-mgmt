@@ -22,6 +22,11 @@ public partial class ControllerOcpp16
             });
             return null;
         }
+        catch (JsonException exp)
+        {
+            Logger.Warning($"DataTransfer => malformed payload: {exp.Message}");
+            return ErrorCodes.FormationViolation;
+        }
         catch (Exception exp)
         {
             Logger.Error($"DataTransfer => Exception: {exp.Message}");

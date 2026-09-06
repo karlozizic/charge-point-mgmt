@@ -1,6 +1,7 @@
 using CPMS.API.Handlers.ChargeSession;
 using CPMS.API.Handlers.ChargeTag;
 using CPMS.API.Projections;
+using CPMS.Core.Models.Responses;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -77,6 +78,7 @@ public class ChargeTagsController : ControllerBase
     [HttpPost("authorize")]
     public async Task<ActionResult<bool>> AuthorizeTag(AuthorizeTagCommand command)
     {
-        return Ok(await _mediator.Send(command));
+        // The console only needs yes/no; the granular status exists for the OCPP idTagInfo.
+        return Ok(await _mediator.Send(command) == AuthorizationStatus.Accepted);
     }
 }

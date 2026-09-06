@@ -40,9 +40,14 @@ public partial class ControllerOcpp16
             msgOut.JsonPayload = JsonConvert.SerializeObject(stopTransactionResponseProxy);
             Logger.Info($"StopTransaction => Response serialized: {JsonConvert.SerializeObject(stopTransactionResponseProxy)}");
         }
+        catch (JsonException exp)
+        {
+            Logger.Warning($"StopTransaction => malformed payload: {exp.Message}");
+            errorCode = ErrorCodes.FormationViolation;
+        }
         catch (Exception exp)
         {
-            Logger.Error($"Exception", exp);
+            Logger.Error($"StopTransaction exception", exp);
             errorCode = ErrorCodes.InternalError;
         }
 

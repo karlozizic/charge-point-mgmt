@@ -25,6 +25,11 @@ public partial class ControllerOcpp16
             msgOut.JsonPayload = JsonConvert.SerializeObject(new Proxy.OCPP_1._6.MeterValuesResponse());
             return null;
         }
+        catch (JsonException exp)
+        {
+            Logger.Warning($"MeterValues => malformed payload: {exp.Message}");
+            return ErrorCodes.FormationViolation;
+        }
         catch (Exception exp)
         {
             Logger.Error($"MeterValues => Exception: {exp.Message}", exp);
