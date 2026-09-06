@@ -1,9 +1,7 @@
 using CPMS.API.Infrastructure;
-using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.API.Services;
 using CPMS.BuildingBlocks.Infrastructure.Logger;
-using JasperFx.Events.Projections;
 using Marten;
 using Stripe;
 
@@ -33,19 +31,7 @@ StripeConfiguration.ApiKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_K
 var connectionString = builder.Configuration.GetConnectionString("MartenDb")
     ?? throw new InvalidOperationException("ConnectionStrings:MartenDb is not configured.");
 
-builder.Services.AddMarten(options =>
-    {
-        options.Connection(connectionString);
-        options.UseNewtonsoftForSerialization();
-
-        // All read models are written in the same transaction as the events.
-        options.Projections.Add<ChargePointProjection>(ProjectionLifecycle.Inline);
-        options.Projections.Add<ChargeSessionProjection>(ProjectionLifecycle.Inline);
-        options.Projections.Add<ChargeTagProjection>(ProjectionLifecycle.Inline);
-        options.Projections.Add<LocationProjection>(ProjectionLifecycle.Inline);
-        options.Projections.Add<PricingGroupProjection>(ProjectionLifecycle.Inline);
-        options.Projections.Add<SessionBillingProjection>(ProjectionLifecycle.Inline);
-    })
+builder.Services.AddMarten(options => MartenConfiguration.Configure(options, connectionString))
     .UseLightweightSessions();
 
 builder.Services.AddSingleton<ILoggerService, LoggerService>();
