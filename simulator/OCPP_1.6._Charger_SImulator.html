@@ -1,5 +1,6 @@
 <html>
 <head>
+    <meta charset="utf-8">
     <title>ChargePoint Simulator</title>
     <style>
         :root {
@@ -370,6 +371,7 @@
         var RECONNECT_MAX_DELAY = 30000;
         var reconnectAttempts = 0;
         var reconnectTimer = null;
+        var closedByUser = false;
 
         var batteryCapacity = {1: 50000, 2: 50000};
         var initialSoC = {1: $("#soc1").val(), 2: $("#soc2").val()};
@@ -519,8 +521,9 @@
             
 
             if (_websocket) {
-                setConnectionStatus(false);
-                clearInterval(pingInterval);
+                closedByUser = true;
+                setConnectionStatus(false, 1);
+                setConnectionStatus(false, 2);
                 _websocket.close(3001);
             } else {
                 var usernamePassword = username + ":" + password;
@@ -532,6 +535,7 @@
                 _websocket = new WebSocket(wsUrlWithParams, ["ocpp1.6", "ocpp1.5", "simulator"]);
                 _websocket.onopen = function (authorizationData) {
                     reconnectAttempts = 0;
+                    closedByUser = false;
                     bootAccepted = false;
                     setConnectionStatus(true, 1);
                     setConnectionStatus(true, 2);
@@ -651,8 +655,9 @@
                     setConnectionStatus(false, 1);
                     setConnectionStatus(false, 2);
 
-                    if (evt.code == 3001) {
+                    if (closedByUser || evt.code == 3001) {
                         logMsg('ws closed');
+                        closedByUser = false;
                         reconnectAttempts = 0;
                         return;
                     }
@@ -680,7 +685,8 @@
                 _websocket.onerror = function (evt) {
                     // onclose may already have cleared the socket when a late error arrives.
                     if (_websocket && _websocket.readyState == 1) {
-                        setConnectionStatus(false);
+                        setConnectionStatus(false, 1);
+                        setConnectionStatus(false, 2);
                         logMsg('ws normal error: ' + evt.type);
                     }
                 };
@@ -955,7 +961,8 @@
         }
 
         $( document ).ready(function() {
-            setConnectionStatus(false);
+            setConnectionStatus(false, 1);
+            setConnectionStatus(false, 2);
 
             //bind controls
             $('#connect').click(function () {
@@ -1008,6 +1015,7 @@
 
             $('#connect').on('change', function () {
                 if (_websocket) {
+                    closedByUser = true;
                     _websocket.close(3001);
                 }
             });
