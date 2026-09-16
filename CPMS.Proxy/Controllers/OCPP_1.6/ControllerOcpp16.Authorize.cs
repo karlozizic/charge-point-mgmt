@@ -41,6 +41,11 @@ public partial class ControllerOcpp16
             authorizeResponse.IdTagInfo.Status = authorizationChargerResponse.AuthorizationStatus;
             msgOut.JsonPayload = JsonConvert.SerializeObject(authorizeResponse);
         }
+        catch (JsonException exp)
+        {
+            Logger.Warning($"Authorize => malformed payload: {exp.Message}");
+            errorCode = ErrorCodes.FormationViolation;
+        }
         catch (Exception exp)
         {
             Logger.Error($"Authorize => Exception: {exp.Message}");

@@ -2,6 +2,7 @@ namespace CPMS.Proxy.OCPP_1._6;
 
 public class ErrorCodes
 {
+    public static string NotImplemented = "NotImplemented";
     public static string NotSupported = "NotSupported";
     public static string? InternalError = "InternalError";
     public static string ProtocolError = "ProtocolError";

@@ -31,6 +31,11 @@ public partial class ControllerOcpp16
             msgOut.JsonPayload = JsonConvert.SerializeObject(new Proxy.OCPP_1._6.StatusNotificationResponse());
             return null;
         }
+        catch (JsonException exp)
+        {
+            Logger.Warning($"StatusNotification => malformed payload: {exp.Message}");
+            return ErrorCodes.FormationViolation;
+        }
         catch (Exception exp)
         {
             Logger.Error($"StatusNotification => Exception: {exp.Message}", exp);

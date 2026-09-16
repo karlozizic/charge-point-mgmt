@@ -29,11 +29,11 @@ public class ProxyController : ControllerBase
     {
         _logger.Info($"Authorization request received for chargePoint: {request.OcppChargerId}, tagId: {request.IdTag}");
 
-        var isAuthorized = await _mediator.Send(new AuthorizeTagCommand { TagId = request.IdTag });
+        var status = await _mediator.Send(new AuthorizeTagCommand { TagId = request.IdTag });
 
         return Ok(new AuthorizeChargerResponse
         {
-            AuthorizationStatus = isAuthorized ? AuthorizationStatus.Accepted : AuthorizationStatus.Invalid
+            AuthorizationStatus = status
         });
     }
 

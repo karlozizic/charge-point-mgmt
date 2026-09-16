@@ -49,7 +49,7 @@ public partial class ControllerOcpp16
             "MeterValues" => await HandleMeterValues(msgIn, msgOut),
             "StatusNotification" => await HandleStatusNotification(msgIn, msgOut),
             "DataTransfer" => HandleDataTransfer(msgIn, msgOut),
-            _ => NotSupported(msgIn.Action)
+            _ => NotImplemented(msgIn.Action)
         };
 
         if (!string.IsNullOrEmpty(errorCode))
@@ -62,9 +62,10 @@ public partial class ControllerOcpp16
         return msgOut;
     }
 
-    private string NotSupported(string action)
+    // OCPP 1.6 distinguishes NotImplemented (action unknown) from NotSupported (known, not offered).
+    private string NotImplemented(string action)
     {
-        Logger.Warning($"Unsupported action: {action}");
-        return ErrorCodes.NotSupported;
+        Logger.Warning($"Unknown action: {action}");
+        return ErrorCodes.NotImplemented;
     }
 }

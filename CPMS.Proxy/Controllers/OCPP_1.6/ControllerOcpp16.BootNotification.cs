@@ -40,6 +40,11 @@ public partial class ControllerOcpp16
             Logger.Info($"BootNotification => {ChargePointStatus.Id} {(registered ? "accepted" : "rejected: not registered")}");
             return null;
         }
+        catch (JsonException exp)
+        {
+            Logger.Warning($"BootNotification => malformed payload: {exp.Message}");
+            return ErrorCodes.FormationViolation;
+        }
         catch (Exception exp)
         {
             Logger.Error($"BootNotification => Exception: {exp.Message}");
