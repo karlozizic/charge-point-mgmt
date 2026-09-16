@@ -11,6 +11,8 @@ access.
    rejected for an unknown charger id, and the simulator ignores the rejection, so make sure the id
    exists before you connect.
 3. Open the HTML file, set the charger id, press **Connect**.
+4. Press **Authorize** before **Start**. The gateway keeps an authorization cache per charger, and
+   answers StartTransaction with `Invalid` for a tag it has not seen an Authorize for.
 
 The Local target is `ws://127.0.0.1:5000/OCPP` — the port `CPMS.Proxy` pins in its
 `launchSettings.json`.
