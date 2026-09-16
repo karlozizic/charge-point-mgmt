@@ -356,10 +356,17 @@
         var pingInterval = null;
         var hbInterval = null;
 
-        // The BootNotification response is the first CALLRESULT after a socket opens. It cannot be
-        // recognised by LastAction, because BootNotification() sends two StatusNotifications straight
-        // after the boot CALL and overwrites it before the answer arrives.
+        // Responses used to be matched against a single "last action sent" slot in sessionStorage. That
+        // cannot work: BootNotification() sends two StatusNotifications straight after the boot CALL, so
+        // the slot no longer said BootNotification when the answer arrived, and starting both connectors
+        // in quick succession sent both StartTransaction answers to the second connector.
+        //
+        // The boot answer is instead the first CALLRESULT after a socket opens.
         var bootPending = false;
+
+        // StartTransaction answers are matched on the message id. OCPP echoes it in the CALLRESULT, and
+        // `ControllerOcpp16` copies `msgIn.UniqueId` onto the reply.
+        var pendingStarts = {};
 
         // Reconnect backoff. Without it a closed proxy produces an unbounded retry loop, and two tabs
         // sharing a charger id close each other forever: the gateway drops the older socket with 1000.
@@ -445,6 +452,15 @@
             return id;
         }
 
+        // randomId() assigns the shared global `id` as a side effect; this one does not.
+        function newCallId() {
+            var callId = "";
+            for (var i = 0; i < 36; i++) {
+                callId += possible.charAt(Math.floor(Math.random() * possible.length));
+            }
+            return callId;
+        }
+
         function generatePassword(bytesLength = 20) {
             if (bytesLength > 20 || bytesLength <= 0) {
                 throw new Error("Bytes length should be between 1 and 20.");
@@ -484,7 +500,6 @@
                 _websocket.onopen = function (authorizationData) {
                     reconnectAttempts = 0;
                     bootPending = true;
-                    sessionStorage.setItem('LastAction', "BootNotification");
                     setConnectionStatus(true);
                     BootNotification();
 
@@ -504,13 +519,12 @@
                     }
 
                     if (ddata[0] === 3) {
-                        la = getLastAction();
-
-                        if (la && la.startsWith("startTransaction")) {
+                        if (pendingStarts[ddata[1]] !== undefined) {
                             try {
-                                var connectorId = la.slice(-1);
+                                var connectorId = pendingStarts[ddata[1]];
+                                delete pendingStarts[ddata[1]];
                                 var dd = ddata[2];
-                                
+
                                 if (dd && dd.idTagInfo && dd.idTagInfo.status) {
                                     var status = dd.idTagInfo.status;
                                     var txId = dd.transactionId;
@@ -524,6 +538,10 @@
                                         logMsg("Transaction rejected: " + status);
                                         abortStart(connectorId);
                                     }
+                                }
+                                else {
+                                    logMsg("StartTransaction answer carried no idTagInfo; connector " + connectorId + " stays idle.");
+                                    abortStart(connectorId);
                                 }
                             } catch (error) {
                                 logMsg("Error processing start transaction response: " + error.message);
@@ -613,6 +631,7 @@
                 _websocket.onclose = function (evt) {
                     $('#connect').text('Connect').css('background', '#369');
                     stopAllTimers();
+                    clearPendingStarts();
                     _websocket = null;
                     bootPending = false;
 
@@ -658,7 +677,6 @@
         }
 
         function Authorize(){
-            sessionStorage.setItem('LastAction', "Authorize");
             var Auth = JSON.stringify([2, id, "Authorize", {"idTag": $("#TAG").val()}]);
             _websocket.send(Auth);
         }
@@ -682,7 +700,10 @@
                 sessionStorage.setItem('idTag', idTag);
             }
 
-            var strtT = JSON.stringify([2, id, "StartTransaction", {
+            var startCallId = newCallId();
+            pendingStarts[startCallId] = connectorId;
+
+            var strtT = JSON.stringify([2, startCallId, "StartTransaction", {
                 "connectorId": connectorId,
                 "idTag": idTag,
                 "timestamp": formatDate(new Date()),
@@ -690,7 +711,6 @@
                 "reservationId": 0
             }]);
 
-            sessionStorage.setItem('LastAction', "startTransaction"+connectorId);
 
             _websocket.send(strtT);
         }
@@ -754,16 +774,10 @@
             meterValInterval[connectorId] = null;
             sessionStorage.setItem('TransactionInProgress'+connectorId, false)
 
-            sessionStorage.setItem('LastAction', "stopTransaction"+connectorId);
             _websocket.send(stpT);
             document.getElementById("statusValue" + connectorId).value = "Available"
 
             send_StatusNotification(connectorId)
-        }
-
-        function getLastAction(){
-            var LastAction = sessionStorage.getItem("LastAction");
-            return LastAction;
         }
 
         function BootNotification(){
@@ -798,6 +812,13 @@
         }
 
         // Every timer the socket owns. Leaving one running after a close makes it call send() on null.
+        function clearPendingStarts() {
+            for (var callId in pendingStarts) {
+                abortStart(pendingStarts[callId]);
+            }
+            pendingStarts = {};
+        }
+
         function stopAllTimers() {
             clearInterval(pingInterval);
             pingInterval = null;
@@ -815,14 +836,12 @@
                 hbInterval = null;
                 return;
             }
-            sessionStorage.setItem('LastAction', "Heartbeat");
             var HB = JSON.stringify([2, id, "Heartbeat", {}]);
             _websocket.send(HB);
         }
         
         function send_MeterValues(connectorId)
         {
-            sessionStorage.setItem('LastAction', "MeterValues"+connectorId);
             if (sessionStorage.getItem('TransactionInProgress'+connectorId) == 'true')
                 trId = sessionStorage.getItem('TransactionId'+connectorId);
             else
@@ -843,7 +862,6 @@
         
         function send_StatusNotification(connectorId)
         {
-            sessionStorage.setItem('LastAction', "StatusNotification"+connectorId);
             var statusVal = String($("#statusValue"+connectorId).val());
             var SN = JSON.stringify([2, id, "StatusNotification", {
                 "connectorId": connectorId,
@@ -936,7 +954,6 @@
             });
 
             $('#data_transfer').click(function () {
-                sessionStorage.setItem('LastAction', "DataTransfer");
                 var DT = JSON.stringify([2, id, "DataTransfer", {
                     "vendorId": "rus.avt.cp",
                     "messageId": "GetChargeInstruction",
