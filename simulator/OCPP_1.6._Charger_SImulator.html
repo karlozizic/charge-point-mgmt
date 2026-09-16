@@ -349,12 +349,25 @@
             crossorigin="anonymous"></script>
 
     <script>
-        var c = 0;
         var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         var id = randomId();
         var _websocket = null;
         var connector_locked = false;
         var pingInterval = null;
+        var hbInterval = null;
+
+        // The BootNotification response is the first CALLRESULT after a socket opens. It cannot be
+        // recognised by LastAction, because BootNotification() sends two StatusNotifications straight
+        // after the boot CALL and overwrites it before the answer arrives.
+        var bootPending = false;
+
+        // Reconnect backoff. Without it a closed proxy produces an unbounded retry loop, and two tabs
+        // sharing a charger id close each other forever: the gateway drops the older socket with 1000.
+        var RECONNECT_MAX_ATTEMPTS = 10;
+        var RECONNECT_BASE_DELAY = 1000;
+        var RECONNECT_MAX_DELAY = 30000;
+        var reconnectAttempts = 0;
+        var reconnectTimer = null;
 
         var batteryCapacity = {1: 50000, 2: 50000};
         var initialSoC = {1: $("#soc1").val(), 2: $("#soc2").val()};
@@ -445,6 +458,9 @@
 
 
         function wsConnect() {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+
             var wsurl = $('#environment').val();
             var CP = $('#CP').val();
             
@@ -466,6 +482,8 @@
 
                 _websocket = new WebSocket(wsUrlWithParams, ["ocpp1.6", "ocpp1.5", "simulator"]);
                 _websocket.onopen = function (authorizationData) {
+                    reconnectAttempts = 0;
+                    bootPending = true;
                     sessionStorage.setItem('LastAction', "BootNotification");
                     setConnectionStatus(true);
                     BootNotification();
@@ -475,13 +493,14 @@
                 };
 
                 _websocket.onmessage = function (msg) {
-                    c++;
                     var ddata = (JSON.parse(msg.data));
 
-                    if (c == 1) {
-                        var hb_interval = handleData(ddata);
-                        sessionStorage.setItem("Configuration", hb_interval);
-                        startHB(hb_interval * 1000);
+                    if (ddata[0] === 3 && bootPending) {
+                        bootPending = false;
+                        var bootConf = ddata[2] || {};
+                        logMsg("BootNotification " + bootConf.status + ", interval " + bootConf.interval + "s");
+                        sessionStorage.setItem("Configuration", bootConf.interval);
+                        startHB(Number(bootConf.interval) * 1000);
                     }
 
                     if (ddata[0] === 3) {
@@ -500,8 +519,10 @@
                                         logMsg("Data exchange successful!");
                                         sessionStorage.setItem('TransactionId' + connectorId, txId);
                                         setTransactionStatus(parseInt(connectorId), true);
+                                        beginCharging(connectorId);
                                     } else {
-                                        logMsg("Transaction rejected: " + status);                               
+                                        logMsg("Transaction rejected: " + status);
+                                        abortStart(connectorId);
                                     }
                                 }
                             } catch (error) {
@@ -591,20 +612,39 @@
 
                 _websocket.onclose = function (evt) {
                     $('#connect').text('Connect').css('background', '#369');
-                    clearInterval(pingInterval);
+                    stopAllTimers();
+                    _websocket = null;
+                    bootPending = false;
+
                     if (evt.code == 3001) {
                         logMsg('ws closed');
-                        _websocket = null;
-                    } else {
-                        logMsg('ws connection error: ' + evt.code);
-                        $('#console').html("");
-                        _websocket = null;
-                        wsConnect();
+                        reconnectAttempts = 0;
+                        return;
                     }
+
+                    // The gateway closes the previous socket with 1000 when the same charger id
+                    // connects again. Reconnecting here would make two tabs evict each other forever.
+                    if (evt.code == 1000) {
+                        logMsg('ws closed by the server (1000). Not reconnecting — another tab may hold this charger id.');
+                        reconnectAttempts = 0;
+                        return;
+                    }
+
+                    if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
+                        logMsg('ws connection error: ' + evt.code + '. Giving up after ' + reconnectAttempts + ' attempts; press Connect to retry.');
+                        reconnectAttempts = 0;
+                        return;
+                    }
+
+                    var delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts), RECONNECT_MAX_DELAY);
+                    reconnectAttempts++;
+                    logMsg('ws connection error: ' + evt.code + '. Reconnect attempt ' + reconnectAttempts + ' in ' + Math.round(delay / 1000) + 's.');
+                    reconnectTimer = setTimeout(wsConnect, delay);
                 };
 
                 _websocket.onerror = function (evt) {
-                    if (_websocket.readyState == 1) {
+                    // onclose may already have cleared the socket when a late error arrives.
+                    if (_websocket && _websocket.readyState == 1) {
                         setConnectionStatus(false);
                         logMsg('ws normal error: ' + evt.type);
                     }
@@ -623,8 +663,10 @@
             _websocket.send(Auth);
         }
      
+        // A transaction only exists once the CSMS answers Accepted. Until then this function must not
+        // set TransactionInProgress, report Charging, or start the meter timer: a rejected tag would
+        // leave the timer running forever, sending MeterValues under a stale or missing transaction id.
         function startTransaction(connectorId, idTag = null){
-            sessionStorage.setItem('TransactionInProgress'+connectorId, true)
             connector_locked = true;
             document.getElementById("soc" + connectorId).setAttribute('readonly', true);
             //document.getElementById("pai" + connectorId).setAttribute('readonly', true);
@@ -648,16 +690,33 @@
                 "reservationId": 0
             }]);
 
-            document.getElementById("statusValue" + connectorId).value = "Charging"
-            send_StatusNotification(connectorId)
             sessionStorage.setItem('LastAction', "startTransaction"+connectorId);
 
-            let num = 1
+            _websocket.send(strtT);
+        }
+
+        // Called from the StartTransaction CALLRESULT once the CSMS accepted the tag.
+        function beginCharging(connectorId){
+            connectorId = parseInt(connectorId);
+            sessionStorage.setItem('TransactionInProgress'+connectorId, true)
+
+            document.getElementById("statusValue" + connectorId).value = "Charging"
+            send_StatusNotification(connectorId)
+
+            clearInterval(meterValInterval[connectorId]);
             meterValInterval[connectorId] = setInterval(() => {
                 prepareMeterValues(connectorId);
             }, METER_VALUES_INTERVAL)
+        }
 
-            _websocket.send(strtT);
+        // Called when the CSMS rejected the tag. Undoes what startTransaction changed.
+        function abortStart(connectorId){
+            connectorId = parseInt(connectorId);
+            connector_locked = false;
+            document.getElementById("soc" + connectorId).removeAttribute('readonly');
+            sessionStorage.setItem('TransactionInProgress'+connectorId, false)
+            sessionStorage.removeItem('TransactionId'+connectorId);
+            setTransactionStatus(connectorId, false);
         }
 
         function stopTransaction(connectorId, transaction_id = false){
@@ -702,19 +761,6 @@
             send_StatusNotification(connectorId)
         }
 
-        function handleData(data, request = false){
-            var lastAction = getLastAction();
-            if(lastAction == "BootNotification"){
-                data = data[2];
-                heartbeat_interval = data.interval;
-                return heartbeat_interval;
-            }else if(lastAction.startsWith("StartTransaction")){
-                return "StartTransaction";
-            }else if (1==2){
-                alert("else");
-            }
-        }
-
         function getLastAction(){
             var LastAction = sessionStorage.getItem("LastAction");
             return LastAction;
@@ -743,11 +789,32 @@
         function startHB(interval){
             interval = isNaN(interval) || !interval ? 30000 : interval;
             logMsg("Setting heartbeat interval to "+interval);
-            if (interval)
-            setInterval(send_heartbeat,interval);
+            clearInterval(hbInterval);
+            hbInterval = setInterval(send_heartbeat, interval);
+        }
+
+        function socketReady() {
+            return _websocket && _websocket.readyState === WebSocket.OPEN;
+        }
+
+        // Every timer the socket owns. Leaving one running after a close makes it call send() on null.
+        function stopAllTimers() {
+            clearInterval(pingInterval);
+            pingInterval = null;
+            clearInterval(hbInterval);
+            hbInterval = null;
+            for (var connectorId in meterValInterval) {
+                clearInterval(meterValInterval[connectorId]);
+                meterValInterval[connectorId] = null;
+            }
         }
 
         function send_heartbeat() {
+            if (!socketReady()) {
+                clearInterval(hbInterval);
+                hbInterval = null;
+                return;
+            }
             sessionStorage.setItem('LastAction', "Heartbeat");
             var HB = JSON.stringify([2, id, "Heartbeat", {}]);
             _websocket.send(HB);

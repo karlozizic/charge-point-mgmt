@@ -19,10 +19,21 @@ The Local target is `ws://127.0.0.1:5000/OCPP` — the port `CPMS.Proxy` pins in
 
 - Sends BootNotification and a StatusNotification per connector on connect, then heartbeats at the
   interval from the Boot response.
-- Start/Stop per connector drive StartTransaction/StopTransaction; while charging it sends
-  MeterValues every 15 s (`Energy.Active.Import.Register` in Wh, `Power.Active.Import`, `SoC`) from a
-  small battery model.
+- Start/Stop per connector drive StartTransaction/StopTransaction. A connector only enters the
+  charging state after the CSMS answers `Accepted`; a rejected tag rolls the connector back. While
+  charging it sends MeterValues every 15 s (`Energy.Active.Import.Register` in Wh,
+  `Power.Active.Import`, `SoC`) from a small battery model.
 - Answers server-initiated calls: Reset, RemoteStartTransaction, RemoteStopTransaction,
   UnlockConnector, ChangeAvailability, ChangeConfiguration, GetConfiguration, SetChargingProfile.
 
-One charger per browser tab; open more tabs for more chargers.
+## Reconnect
+
+An unexpected close reconnects with exponential backoff, 1 s to 30 s, and gives up after 10 attempts;
+press **Connect** to start over. A close with code 1000 does not reconnect at all, because that is how
+the gateway drops the older socket when the same charger id connects twice — two tabs on one id would
+otherwise evict each other forever.
+
+**Use a different charger id per tab.** One charger per tab; open more tabs for more chargers.
+
+Timers stop when the socket closes. A transaction that was running is not resumed after a reconnect —
+stop it and start a new one.
