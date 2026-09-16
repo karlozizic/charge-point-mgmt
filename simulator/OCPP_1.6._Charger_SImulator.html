@@ -350,25 +350,20 @@
 
     <script>
         var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        var id = randomId();
         var _websocket = null;
-        var connector_locked = false;
+        var connectorLocked = {1: false, 2: false};
         var pingInterval = null;
         var hbInterval = null;
+        var bootRetryTimer = null;
 
-        // Responses used to be matched against a single "last action sent" slot in sessionStorage. That
-        // cannot work: BootNotification() sends two StatusNotifications straight after the boot CALL, so
-        // the slot no longer said BootNotification when the answer arrived, and starting both connectors
-        // in quick succession sent both StartTransaction answers to the second connector.
-        //
-        // The boot answer is instead the first CALLRESULT after a socket opens.
+        // Until BootNotification is Accepted the charge point may only answer the CSMS (OCPP 1.6 4.2.1).
         var bootPending = false;
+        var bootAccepted = false;
 
-        // StartTransaction answers are matched on the message id. OCPP echoes it in the CALLRESULT, and
-        // `ControllerOcpp16` copies `msgIn.UniqueId` onto the reply.
+        // Answers are matched on the CALL's uniqueId, which OCPP echoes in the CALLRESULT.
         var pendingStarts = {};
 
-        // Reconnect backoff. Without it a closed proxy produces an unbounded retry loop, and two tabs
+        // Reconnect backoff. Without it a closed gateway produces an unbounded retry loop, and two tabs
         // sharing a charger id close each other forever: the gateway drops the older socket with 1000.
         var RECONNECT_MAX_ATTEMPTS = 10;
         var RECONNECT_BASE_DELAY = 1000;
@@ -381,21 +376,68 @@
         var currentSoC = {1: $("#soc1").val(), 2: $("#soc2").val()};
         var electricityConsumed = {1: 0, 2: 0};
         var meterValInterval = {1: null, 2: null};
-        const METER_VALUES_INTERVAL = 15000;
+        var meterValuesInterval = 15000;
+
+        var READONLY_KEYS = ["NumberOfConnectors"];
+        var configuration = {
+            AllowOfflineTxForUnknownId: "false",
+            HeartbeatInterval: "300",
+            MeterValueSampleInterval: "15",
+            NumberOfConnectors: "2"
+        };
+
+        function isConnector(connectorId) { return connectorId === 1 || connectorId === 2; }
+        function isCharging(connectorId) { return sessionStorage.getItem('TransactionInProgress' + connectorId) === 'true'; }
+        function transactionIdOf(connectorId) { return Number(sessionStorage.getItem('TransactionId' + connectorId)); }
+
+        function connectorOfTransaction(transactionId) {
+            if (isCharging(1) && transactionIdOf(1) === transactionId) return 1;
+            if (isCharging(2) && transactionIdOf(2) === transactionId) return 2;
+            return null;
+        }
+
+        function freeConnector() { return !isCharging(1) ? 1 : (!isCharging(2) ? 2 : null); }
+
+        function configurationKeys() {
+            var keys = [];
+            for (var key in configuration) {
+                keys.push({key: key, readonly: READONLY_KEYS.indexOf(key) >= 0, value: configuration[key]});
+            }
+            return keys;
+        }
+
+        function changeConfiguration(key, value) {
+            if (!(key in configuration)) return "NotSupported";
+            if (READONLY_KEYS.indexOf(key) >= 0) return "Rejected";
+
+            if (key === "HeartbeatInterval" || key === "MeterValueSampleInterval") {
+                var seconds = Number(value);
+                if (!isFinite(seconds) || seconds <= 0) return "Rejected";
+                configuration[key] = String(seconds);
+                if (key === "HeartbeatInterval") startHB(seconds * 1000);
+                else { meterValuesInterval = seconds * 1000; restartMeterTimers(); }
+                return "Accepted";
+            }
+
+            configuration[key] = String(value);
+            return "Accepted";
+        }
 
         function handleSoCChange(connectorId) {
             const newSoC = document.getElementById("soc" + connectorId).value;
             initialSoC[connectorId] = newSoC;
             currentSoC[connectorId] = newSoC;
+            electricityConsumed[connectorId] = 0;   // the old total was measured against the old baseline
         }
 
         function prepareMeterValues(connectorId) {
             var currentElectricityConsumed = electricityConsumed[connectorId];
             var currentLocalSoC = currentSoC[connectorId];
-            var currentPower = document.getElementById("pai" + connectorId).value;
+            var currentPower = Number(document.getElementById("pai" + connectorId).value);
+            if (!isFinite(currentPower) || currentPower < 0) currentPower = 0;
 
             if (Number(currentLocalSoC) < 100) {
-                currentElectricityConsumed = currentElectricityConsumed + (currentPower / 60000 / 60 * METER_VALUES_INTERVAL);
+                currentElectricityConsumed = currentElectricityConsumed + (currentPower / 60000 / 60 * meterValuesInterval);
                 currentLocalSoC = (((Number(initialSoC[connectorId]) / 100) * batteryCapacity[connectorId] + currentElectricityConsumed) / batteryCapacity[connectorId] * 100).toString();
                 if (Number(currentLocalSoC) >= 100) {
                     currentSoC[connectorId] = '100';
@@ -445,20 +487,11 @@
         }
 
         function randomId() {
-            id = "";
+            var value = "";
             for (var i = 0; i < 36; i++) {
-                id += possible.charAt(Math.floor(Math.random() * possible.length));
+                value += possible.charAt(Math.floor(Math.random() * possible.length));
             }
-            return id;
-        }
-
-        // randomId() assigns the shared global `id` as a side effect; this one does not.
-        function newCallId() {
-            var callId = "";
-            for (var i = 0; i < 36; i++) {
-                callId += possible.charAt(Math.floor(Math.random() * possible.length));
-            }
-            return callId;
+            return value;
         }
 
         function generatePassword(bytesLength = 20) {
@@ -499,8 +532,9 @@
                 _websocket = new WebSocket(wsUrlWithParams, ["ocpp1.6", "ocpp1.5", "simulator"]);
                 _websocket.onopen = function (authorizationData) {
                     reconnectAttempts = 0;
-                    bootPending = true;
-                    setConnectionStatus(true);
+                    bootAccepted = false;
+                    setConnectionStatus(true, 1);
+                    setConnectionStatus(true, 2);
                     BootNotification();
 
                     $('#connect').text('Disconnect').css('background', 'green');
@@ -512,117 +546,96 @@
 
                     if (ddata[0] === 3 && bootPending) {
                         bootPending = false;
-                        var bootConf = ddata[2] || {};
-                        logMsg("BootNotification " + bootConf.status + ", interval " + bootConf.interval + "s");
-                        sessionStorage.setItem("Configuration", bootConf.interval);
-                        startHB(Number(bootConf.interval) * 1000);
+                        handleBootResponse(ddata[2] || {});
+                        return;
                     }
 
                     if (ddata[0] === 3) {
                         if (pendingStarts[ddata[1]] !== undefined) {
-                            try {
-                                var connectorId = pendingStarts[ddata[1]];
-                                delete pendingStarts[ddata[1]];
-                                var dd = ddata[2];
+                            var connectorId = pendingStarts[ddata[1]];
+                            delete pendingStarts[ddata[1]];
+                            var info = (ddata[2] || {}).idTagInfo;
 
-                                if (dd && dd.idTagInfo && dd.idTagInfo.status) {
-                                    var status = dd.idTagInfo.status;
-                                    var txId = dd.transactionId;
-
-                                    if (status == 'Accepted') {
-                                        logMsg("Data exchange successful!");
-                                        sessionStorage.setItem('TransactionId' + connectorId, txId);
-                                        setTransactionStatus(parseInt(connectorId), true);
-                                        beginCharging(connectorId);
-                                    } else {
-                                        logMsg("Transaction rejected: " + status);
-                                        abortStart(connectorId);
-                                    }
-                                }
-                                else {
-                                    logMsg("StartTransaction answer carried no idTagInfo; connector " + connectorId + " stays idle.");
-                                    abortStart(connectorId);
-                                }
-                            } catch (error) {
-                                logMsg("Error processing start transaction response: " + error.message);
+                            if (info && info.status === 'Accepted') {
+                                sessionStorage.setItem('TransactionId' + connectorId, ddata[2].transactionId);
+                                beginCharging(connectorId);
+                            } else {
+                                logMsg("Transaction rejected: " + (info ? info.status : "no idTagInfo"));
+                                abortStart(connectorId);
                             }
                         }
-                        
+
                         logMsg("Response: " + JSON.stringify(ddata[2]));
 
                     } else if (ddata[0] === 4) {
-                        logMsg("Data exchange failed - JSON is not accepted!");
+                        logMsg("CALLERROR " + ddata[2] + ": " + ddata[3]);
                     } else if (ddata[0] === 2) {
-                        logMsg("Message Type " + ddata[2]);
-                        id = ddata[1];
+                        var serverId = ddata[1];
+                        var req = ddata[3] || {};
+                        logMsg("Request: " + ddata[2]);
 
                         switch (ddata[2]) {
-                            case "GetConfiguration":
-                                var confRes = JSON.stringify([3, id, {"configurationKey": [
-                                    {"key": "AllowOfflineTxForUnknownId", "readonly": false, "value": "false"},
-                                    {"key": "HeartbeatInterval", "readonly": false, "value": "300"},
-                                    {"key": "MeterValueSampleInterval", "readonly": false, "value": "15"},
-                                    {"key": "NumberOfConnectors", "readonly": true, "value": "2"}
-                                ]}]);
-                                _websocket.send(confRes);
+                            case "GetConfiguration": {
+                                var known = configurationKeys();
+                                var wanted = req.key;
+                                var answer = {configurationKey: wanted ? known.filter(function (k) { return wanted.indexOf(k.key) >= 0; }) : known};
+                                if (wanted) {
+                                    answer.unknownKey = wanted.filter(function (k) { return !(k in configuration); });
+                                }
+                                sendResult(serverId, answer);
                                 break;
-                            case "Reset":
-                                //Reset type SOFT, HARD
-                                var ResetS = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(ResetS);
-                                location.reload();
-                                break;
-                                
-                            case "RemoteStopTransaction":
-                                //TransactionID
-                                var remStp = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(remStp);
-                                var transactionId = ddata[3].transactionId;
-                                var connectorId = undefined;
-                                if (transactionId === Number(sessionStorage.getItem('TransactionId1'))) 
-                                    connectorId = 1;
-                                else if (transactionId === Number(sessionStorage.getItem('TransactionId2'))) 
-                                    connectorId = 2;
-                                var stop_id = (JSON.parse(msg.data)[3].transactionId);
-                                stopTransaction(connectorId,stop_id);
-                                break;
-                            case "RemoteStartTransaction":
-                                //Need to get idTag, connectorId (map - ddata[3])
-                                var remStrt = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(remStrt);
-                                var connectorId = ddata[3].connectorId;
-                                var idTag = ddata[3].idTag;
-                                logMsg("IdTag got from RemoteStartTranasaction is: " + idTag)
-                                startTransaction(connectorId, idTag);
-                                break;
-
-                            case "UnlockConnector": /////////ERROR!!!!!!!!
-                                //connectorId
-                                var UC = JSON.stringify([3, id, {"status": "Unlocked"}]);
-                                _websocket.send(UC);
-                                 connector_locked = false;
-                                setTransactionStatus(1, false);
-                                logMsg("Connector status changed to: "+connector_locked);
-                                break;
+                            }
 
                             case "ChangeConfiguration":
-                                var confs = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(confs);
+                                sendResult(serverId, {status: changeConfiguration(req.key, req.value)});
                                 break;
 
-                            case "ChangeAvailability":
-                                var remStrt = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(remStrt);
+                            case "Reset":
+                                sendResult(serverId, {status: "Accepted"});
+                                setTimeout(function () { location.reload(); }, 500);
                                 break;
-                                
+
+                            case "RemoteStopTransaction": {
+                                var stopConnector = connectorOfTransaction(req.transactionId);
+                                sendResult(serverId, {status: stopConnector ? "Accepted" : "Rejected"});
+                                if (stopConnector) stopTransaction(stopConnector, req.transactionId, "Remote");
+                                break;
+                            }
+
+                            case "RemoteStartTransaction": {
+                                var target = req.connectorId === undefined ? freeConnector() : req.connectorId;
+                                var canStart = isConnector(target) && !isCharging(target);
+                                sendResult(serverId, {status: canStart ? "Accepted" : "Rejected"});
+                                if (canStart) startTransaction(target, req.idTag);
+                                break;
+                            }
+
+                            case "UnlockConnector": {
+                                if (!isConnector(req.connectorId)) {
+                                    sendResult(serverId, {status: "UnlockFailed"});
+                                    break;
+                                }
+                                if (isCharging(req.connectorId)) stopTransaction(req.connectorId, false, "UnlockCommand");
+                                connectorLocked[req.connectorId] = false;
+                                setTransactionStatus(req.connectorId, false);
+                                sendResult(serverId, {status: "Unlocked"});
+                                break;
+                            }
+
+                            case "ChangeAvailability": {
+                                var scope = req.connectorId;
+                                if (scope !== 0 && !isConnector(scope)) sendResult(serverId, {status: "Rejected"});
+                                else if (isCharging(1) || isCharging(2)) sendResult(serverId, {status: "Scheduled"});
+                                else sendResult(serverId, {status: "Accepted"});
+                                break;
+                            }
+
                             case "SetChargingProfile":
-                                var confs = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(confs);
+                                sendResult(serverId, {status: req.csChargingProfiles ? "Accepted" : "Rejected"});
                                 break;
 
                             default:
-                                var error = JSON.stringify([4, id]);
-                                _websocket.send(error);
+                                sendError(serverId, "NotImplemented", "Unknown action " + ddata[2]);
                                 break;
                         }
                     }
@@ -634,6 +647,9 @@
                     clearPendingStarts();
                     _websocket = null;
                     bootPending = false;
+                    bootAccepted = false;
+                    setConnectionStatus(false, 1);
+                    setConnectionStatus(false, 2);
 
                     if (evt.code == 3001) {
                         logMsg('ws closed');
@@ -677,127 +693,136 @@
         }
 
         function Authorize(){
-            var Auth = JSON.stringify([2, id, "Authorize", {"idTag": $("#TAG").val()}]);
-            _websocket.send(Auth);
+            sendCall("Authorize", {idTag: $("#TAG").val()});
         }
      
         // A transaction only exists once the CSMS answers Accepted. Until then this function must not
         // set TransactionInProgress, report Charging, or start the meter timer: a rejected tag would
         // leave the timer running forever, sending MeterValues under a stale or missing transaction id.
         function startTransaction(connectorId, idTag = null){
-            connector_locked = true;
+            connectorId = parseInt(connectorId);
+            connectorLocked[connectorId] = true;
             document.getElementById("soc" + connectorId).setAttribute('readonly', true);
-            //document.getElementById("pai" + connectorId).setAttribute('readonly', true);
-
-            logMsg("Connector"+connectorId+" status changed to: " + connector_locked);
 
             // added because of anonymous users
             if (idTag == null) {
                 idTag = $("#TAG").val();
             }
             else
-            { 
+            {
                 sessionStorage.setItem('idTag', idTag);
             }
 
-            var startCallId = newCallId();
-            pendingStarts[startCallId] = connectorId;
+            var callId = sendCall("StartTransaction", {
+                connectorId: connectorId,
+                idTag: idTag,
+                timestamp: formatDate(new Date()),
+                meterStart: 0
+            });
 
-            var strtT = JSON.stringify([2, startCallId, "StartTransaction", {
-                "connectorId": connectorId,
-                "idTag": idTag,
-                "timestamp": formatDate(new Date()),
-                "meterStart": 0,
-                "reservationId": 0
-            }]);
-
-
-            _websocket.send(strtT);
+            if (callId === null) { abortStart(connectorId); return; }
+            pendingStarts[callId] = connectorId;
         }
 
         // Called from the StartTransaction CALLRESULT once the CSMS accepted the tag.
         function beginCharging(connectorId){
             connectorId = parseInt(connectorId);
-            sessionStorage.setItem('TransactionInProgress'+connectorId, true)
+            sessionStorage.setItem('TransactionInProgress'+connectorId, true);
+            setTransactionStatus(connectorId, true);
 
-            document.getElementById("statusValue" + connectorId).value = "Charging"
-            send_StatusNotification(connectorId)
+            document.getElementById("statusValue" + connectorId).value = "Charging";
+            send_StatusNotification(connectorId);
+            startMeterTimer(connectorId);
+        }
 
+        function startMeterTimer(connectorId){
             clearInterval(meterValInterval[connectorId]);
-            meterValInterval[connectorId] = setInterval(() => {
+            meterValInterval[connectorId] = setInterval(function () {
                 prepareMeterValues(connectorId);
-            }, METER_VALUES_INTERVAL)
+            }, meterValuesInterval);
+        }
+
+        function restartMeterTimers(){
+            if (meterValInterval[1]) startMeterTimer(1);
+            if (meterValInterval[2]) startMeterTimer(2);
         }
 
         // Called when the CSMS rejected the tag. Undoes what startTransaction changed.
         function abortStart(connectorId){
             connectorId = parseInt(connectorId);
-            connector_locked = false;
+            connectorLocked[connectorId] = false;
             document.getElementById("soc" + connectorId).removeAttribute('readonly');
-            sessionStorage.setItem('TransactionInProgress'+connectorId, false)
+            sessionStorage.setItem('TransactionInProgress'+connectorId, false);
             sessionStorage.removeItem('TransactionId'+connectorId);
             setTransactionStatus(connectorId, false);
         }
 
-        function stopTransaction(connectorId, transaction_id = false){
-            transaction_id == false ? ssid = sessionStorage.getItem('TransactionId'+ connectorId) : ssid = transaction_id;
-            if (ssid == null || isNaN(parseInt(ssid))) {
+        function stopTransaction(connectorId, transaction_id = false, reason = "Local"){
+            connectorId = parseInt(connectorId);
+            var ssid = transaction_id === false ? sessionStorage.getItem('TransactionId' + connectorId) : transaction_id;
+            if (ssid === null || isNaN(parseInt(ssid))) {
                 logMsg("No transaction to stop on connector " + connectorId);
                 return;
             }
-            connector_locked = false;
+
+            connectorLocked[connectorId] = false;
             document.getElementById("soc" + connectorId).removeAttribute('readonly');
-            //document.getElementById("pai" + connectorId).removeAttribute('readonly');
-            logMsg("Connector"+connectorId+" status changed to: " + connector_locked);
             setConnectionStatus(true, connectorId);
 
             // added because of anonymous users
             var idTag = sessionStorage.getItem('idTag');
+            if (idTag == null) idTag = $("#TAG").val();
 
-            if (idTag == null)
-                idTag = $("#TAG").val();
-
-            var meterVal = parseInt(electricityConsumed[connectorId]);  
-            if (isNaN(meterVal) || meterVal === 0) {  
-                meterVal = 2000;  
-            }
-            var stpT = JSON.stringify([2, id, "StopTransaction",{
-                "transactionId": parseInt(ssid),
-                "idTag": idTag,
-                "timestamp": formatDate(new Date()),
-                "meterStop": meterVal
-            }]);
-            electricityConsumed[connectorId] = 0;
-
-            console.log("Clearing interval...")
             clearInterval(meterValInterval[connectorId]);
             meterValInterval[connectorId] = null;
-            sessionStorage.setItem('TransactionInProgress'+connectorId, false)
+            sessionStorage.setItem('TransactionInProgress' + connectorId, false);
+            sessionStorage.removeItem('TransactionId' + connectorId);
 
-            _websocket.send(stpT);
-            document.getElementById("statusValue" + connectorId).value = "Available"
+            sendCall("StopTransaction", {
+                transactionId: parseInt(ssid),
+                idTag: idTag,
+                timestamp: formatDate(new Date()),
+                meterStop: Math.round(electricityConsumed[connectorId]),
+                reason: reason
+            });
 
-            send_StatusNotification(connectorId)
+            electricityConsumed[connectorId] = 0;
+            document.getElementById("statusValue" + connectorId).value = "Available";
+            send_StatusNotification(connectorId);
         }
 
         function BootNotification(){
-
-            var BN = JSON.stringify([2, id, "BootNotification", {
-                "chargePointVendor": "AVT-Company",
-                "chargePointModel": "AVT-Express",
-                "chargePointSerialNumber": "avt.001.13.1",
-                "chargeBoxSerialNumber": "avt.001.13.1.01",
-                "firmwareVersion": "0.9.87",
-                "iccid": "",
-                "imsi": "",
-                "meterType": "AVT NQC-ACDC",
-                "meterSerialNumber": "avt.001.13.1.01"
-            }]);
-
+            bootPending = true;
             logMsg('ws connected');
-            _websocket.send(BN);
-            send_StatusNotification(1)
-            send_StatusNotification(2)
+            sendCall("BootNotification", {
+                chargePointVendor: "AVT-Company",
+                chargePointModel: "AVT-Express",
+                chargePointSerialNumber: "avt.001.13.1",
+                chargeBoxSerialNumber: "avt.001.13.1.01",
+                firmwareVersion: "0.9.87",
+                meterType: "AVT NQC-ACDC",
+                meterSerialNumber: "avt.001.13.1.01"
+            });
+        }
+
+        // Accepted: normal operation. Pending or Rejected: send nothing but answers, and try again
+        // after `interval` seconds (OCPP 1.6 4.2.1).
+        function handleBootResponse(conf){
+            logMsg("BootNotification " + conf.status + ", interval " + conf.interval + "s");
+            sessionStorage.setItem("Configuration", conf.interval);
+
+            if (conf.status === "Accepted") {
+                bootAccepted = true;
+                startHB(Number(conf.interval) * 1000);
+                send_StatusNotification(1);
+                send_StatusNotification(2);
+                return;
+            }
+
+            bootAccepted = false;
+            stopAllTimers();
+            var retry = Math.max(Number(conf.interval) || 10, 1) * 1000;
+            bootRetryTimer = setTimeout(function () { if (socketReady()) BootNotification(); }, retry);
         }
 
         function startHB(interval){
@@ -811,6 +836,29 @@
             return _websocket && _websocket.readyState === WebSocket.OPEN;
         }
 
+        function sendCall(action, payload) {
+            if (!socketReady()) {
+                logMsg(action + " not sent: no connection.");
+                return null;
+            }
+            if (!bootAccepted && action !== "BootNotification") {
+                logMsg(action + " not sent: BootNotification is not Accepted.");
+                return null;
+            }
+            var callId = randomId();
+            _websocket.send(JSON.stringify([2, callId, action, payload]));
+            return callId;
+        }
+
+        function sendResult(uniqueId, payload) {
+            if (socketReady()) _websocket.send(JSON.stringify([3, uniqueId, payload]));
+        }
+
+        // CALLERROR is [4, uniqueId, errorCode, errorDescription, errorDetails].
+        function sendError(uniqueId, errorCode, description) {
+            if (socketReady()) _websocket.send(JSON.stringify([4, uniqueId, errorCode, description, {}]));
+        }
+
         // Every timer the socket owns. Leaving one running after a close makes it call send() on null.
         function clearPendingStarts() {
             for (var callId in pendingStarts) {
@@ -820,6 +868,8 @@
         }
 
         function stopAllTimers() {
+            clearTimeout(bootRetryTimer);
+            bootRetryTimer = null;
             clearInterval(pingInterval);
             pingInterval = null;
             clearInterval(hbInterval);
@@ -836,43 +886,39 @@
                 hbInterval = null;
                 return;
             }
-            var HB = JSON.stringify([2, id, "Heartbeat", {}]);
-            _websocket.send(HB);
+            sendCall("Heartbeat", {});
         }
         
         function send_MeterValues(connectorId)
         {
-            if (sessionStorage.getItem('TransactionInProgress'+connectorId) == 'true')
-                trId = sessionStorage.getItem('TransactionId'+connectorId);
-            else
-                trId = 0;
-
-            ssid = parseInt(trId);
             connectorId = parseInt(connectorId);
-            var meterVal = electricityConsumed[connectorId].toString();
-            var pai = ($("#pai"+connectorId).val());
-            var socVal = currentSoC[connectorId];
-            var MV;
-            if (ssid == null)
-                MV = JSON.stringify([2, id, "MeterValues", {"connectorId": connectorId, "meterValue": [{"timestamp": formatDate(new Date()), "sampledValue": [{"value": meterVal, "measurand": "Energy.Active.Import.Register"},{"value": pai, "measurand": "Power.Active.Import"},{"value": socVal, "measurand": "SoC"}]}]}]);
-            else
-                MV = JSON.stringify([2, id, "MeterValues", {"connectorId": connectorId, "transactionId": ssid, "meterValue": [{"timestamp": formatDate(new Date()), "sampledValue": [{"value": meterVal, "measurand": "Energy.Active.Import.Register"},{"value": pai, "measurand": "Power.Active.Import"},{"value": socVal, "measurand": "SoC"}]}]}]);
-            _websocket.send(MV);
+            var power = Number($("#pai" + connectorId).val());
+            if (!isFinite(power) || power < 0) power = 0;
+
+            var payload = {
+                connectorId: connectorId,
+                meterValue: [{
+                    timestamp: formatDate(new Date()),
+                    sampledValue: [
+                        {value: String(Math.round(electricityConsumed[connectorId])), measurand: "Energy.Active.Import.Register", unit: "Wh", context: "Sample.Periodic"},
+                        {value: String(power), measurand: "Power.Active.Import", unit: "W", context: "Sample.Periodic"},
+                        {value: String(Math.round(Number(currentSoC[connectorId]) || 0)), measurand: "SoC", unit: "Percent", context: "Sample.Periodic"}
+                    ]
+                }]
+            };
+
+            if (isCharging(connectorId)) payload.transactionId = transactionIdOf(connectorId);
+            sendCall("MeterValues", payload);
         }
-        
+
         function send_StatusNotification(connectorId)
         {
-            var statusVal = String($("#statusValue"+connectorId).val());
-            var SN = JSON.stringify([2, id, "StatusNotification", {
-                "connectorId": connectorId,
-                "status": statusVal,
-                "errorCode": "NoError",
-                "info": "null",
-                "timestamp": formatDate(new Date()),
-                "vendorId": "",
-                "vendorErrorCode": ""
-            }]);
-            _websocket.send(SN);
+            sendCall("StatusNotification", {
+                connectorId: parseInt(connectorId),
+                status: String($("#statusValue" + connectorId).val()),
+                errorCode: "NoError",
+                timestamp: formatDate(new Date())
+            });
         }
 
         function setConnectionStatus(connected, connectorId)
@@ -954,12 +1000,10 @@
             });
 
             $('#data_transfer').click(function () {
-                var DT = JSON.stringify([2, id, "DataTransfer", {
-                    "vendorId": "rus.avt.cp",
-                    "messageId": "GetChargeInstruction",
-                    "data": ""
-                }]);
-                _websocket.send(DT);
+                sendCall("DataTransfer", {
+                    vendorId: "rus.avt.cp",
+                    messageId: "GetChargeInstruction"
+                });
             });
 
             $('#connect').on('change', function () {

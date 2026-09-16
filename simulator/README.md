@@ -19,14 +19,22 @@ The Local target is `ws://127.0.0.1:5000/OCPP` — the port `CPMS.Proxy` pins in
 
 ## What it does
 
-- Sends BootNotification and a StatusNotification per connector on connect, then heartbeats at the
-  interval from the Boot response.
-- Start/Stop per connector drive StartTransaction/StopTransaction. A connector only enters the
-  charging state after the CSMS answers `Accepted`; a rejected tag rolls the connector back. While
-  charging it sends MeterValues every 15 s (`Energy.Active.Import.Register` in Wh,
-  `Power.Active.Import`, `SoC`) from a small battery model.
-- Answers server-initiated calls: Reset, RemoteStartTransaction, RemoteStopTransaction,
-  UnlockConnector, ChangeAvailability, ChangeConfiguration, GetConfiguration, SetChargingProfile.
+- Sends BootNotification on connect. Until the answer is `Accepted` it sends nothing but replies to the
+  CSMS, and retries the boot after the `interval` it was given (OCPP 1.6 section 4.2.1).
+- Once accepted: a StatusNotification per connector, then heartbeats at the interval from the boot
+  response.
+- Start/Stop per connector drive StartTransaction/StopTransaction. A connector enters the charging state
+  only when the CSMS answers `Accepted`; a rejected tag rolls it back. While charging it sends
+  MeterValues every 15 s (`Energy.Active.Import.Register` Wh, `Power.Active.Import` W, `SoC` Percent)
+  from a small battery model.
+- Answers server-initiated calls, and answers them honestly: Reset, RemoteStartTransaction,
+  RemoteStopTransaction, UnlockConnector, ChangeAvailability, ChangeConfiguration, GetConfiguration,
+  SetChargingProfile. An unknown transaction id or connector is `Rejected`, not `Accepted`.
+  ChangeConfiguration on `HeartbeatInterval` or `MeterValueSampleInterval` really does change them.
+- Anything else gets a CALLERROR of `NotImplemented`.
+
+Every payload is checked against the OCPP 1.6 JSON schemas in `../docs/ocpp/schemas` by the test suite
+in `test/`.
 
 ## Reconnect
 
