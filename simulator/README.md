@@ -7,12 +7,22 @@ access.
 ## Use
 
 1. Start the stack: `docker compose up -d`, then `CPMS.API` and `CPMS.Proxy`.
-2. Create the charge point in the API first (Swagger or the operator console). BootNotification is
-   rejected for an unknown charger id, and the simulator ignores the rejection, so make sure the id
-   exists before you connect.
-3. Open the HTML file, set the charger id, press **Connect**.
+2. Create the charge point and the tag. The easiest way is to let the load driver do it:
+   `dotnet run --project CPMS.Simulator -- --chargers 1 --duration 1 --seed`. That always creates
+   `CP-MANUAL-1` and `TAG-MANUAL`, reserved for this page, which the defaults below already use.
+   BootNotification is rejected for a charger id the API does not know.
+3. Open the HTML file and press **Connect**.
 4. Press **Authorize** before **Start**. The gateway keeps an authorization cache per charger, and
    answers StartTransaction with `Invalid` for a tag it has not seen an Authorize for.
+
+| Field | Default | Note |
+|-------|---------|------|
+| Charger ID | `CP-MANUAL-1` | reserved for this page, so it never fights a fleet member for the id |
+| Tag | `TAG-MANUAL` | never expires |
+| Password | *(disabled)* | the gateway has no authentication; the field did nothing |
+
+Do not point this page at a `CP-SIM-####` id while the load driver is running. The gateway closes the
+older socket when one id connects twice, so the two would evict each other.
 
 The Local target is `ws://127.0.0.1:5000/OCPP` — the port `CPMS.Proxy` pins in its
 `launchSettings.json`.

@@ -45,11 +45,18 @@ function makeSandbox(log) {
     const id = typeof sel === 'string' && sel.startsWith('#') ? sel.slice(1) : String(sel);
     return {
       val(v) { if (v === undefined) return el(id).value; el(id).value = v; return this; },
-      text() { return this; },
       css() { return this; },
       html() { return this; },
-      append(s) { log.push(String(s).replace(/<\/?li>/g, '')); return this; },
+      append(node) {
+        log.push(node && typeof node.__text === 'function' ? node.__text() : String(node).replace(/<\/?li>/g, ''));
+        return this;
+      },
+      text(v) { if (v === undefined) return this.__value || ''; this.__value = String(v); return this; },
+      __text() { return this.__value || ''; },
       ready(fn) { fn(); return this; },
+      addClass() { return this; },
+      removeClass() { return this; },
+      toggleClass() { return this; },
       click(fn) { handlers[id] = fn; return this; },
       change() { return this; },
       on() { return this; },

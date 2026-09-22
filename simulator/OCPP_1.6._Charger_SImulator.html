@@ -4,22 +4,28 @@
     <title>ChargePoint Simulator</title>
     <style>
         :root {
-            --primary-color: #2563eb;
-            --secondary-color: #f8fafc;
-            --accent-color: #0ea5e9;
-            --success-color: #16a34a;
-            --warning-color: #ca8a04;
-            --danger-color: #dc2626;
+            --primary-color: #1d4ed8;
+            --primary-hover: #1e40af;
+            --accent-color: #0369a1;
+            --success-color: #15803d;
+            --success-soft: #dcfce7;
+            --warning-color: #a16207;
+            --warning-soft: #fef3c7;
+            --danger-color: #b91c1c;
+            --danger-hover: #991b1b;
             --background-color: #ffffff;
             --sidebar-bg: #f1f5f9;
+            --sidebar-border: #dbe3ec;
+            --readonly-bg: #eef2f7;
             --card-bg: #f8fafc;
-            --text-color: #1e293b;
+            --card-border: #e2e8f0;
+            --text-color: #0f172a;
+            --text-muted: #475569;
             --border-radius: 6px;
             --input-bg: #ffffff;
             --input-border: #cbd5e1;
-            --console-bg: #f8fafc;
-            --console-text: #475569;
-            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --console-text: #334155;
+            --shadow: 0 1px 3px rgba(15,23,42,0.08);
         }
         html, body {
             height: 100%;
@@ -42,48 +48,72 @@
         }
         .sidebar {
             background: var(--sidebar-bg);
+            border-right: 1px solid var(--sidebar-border);
+            color: var(--text-color);
             min-width: 220px;
             max-width: 260px;
             padding: 24px 16px 18px 16px;
             display: flex;
             flex-direction: column;
             gap: 18px;
-            box-shadow: var(--shadow);
         }
         .sidebar h1 {
             font-size: 1.2em;
             color: var(--primary-color);
             margin-bottom: 18px;
             text-align: left;
+            line-height: 1.35;
         }
         .sidebar .connection-info {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            background: var(--card-bg);
+            gap: 12px;
+            background: var(--background-color);
+            border: 1px solid var(--card-border);
             border-radius: var(--border-radius);
             padding: 14px 12px;
             box-shadow: var(--shadow);
         }
         .sidebar label {
-            font-size: 13px;
-            color: #cbd5e1;
-            margin-bottom: 2px;
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
         }
         .sidebar input, .sidebar select {
+            width: 100%;
+            box-sizing: border-box;
             background: var(--input-bg);
             border: 1px solid var(--input-border);
             color: var(--text-color);
             padding: 7px 10px;
             border-radius: var(--border-radius);
             font-size: 13px;
-            margin-bottom: 0;
         }
+        .sidebar input:focus, .sidebar select:focus,
+        .content input:focus, .content select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(29,78,216,0.15);
+        }
+        /* Generated, not typed: reads as output rather than an empty field. */
         .sidebar input[readonly] {
-            background: #222b3a;
-            color: #64748b;
+            background: var(--readonly-bg);
+            border-style: dashed;
+            color: var(--text-muted);
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 11px;
+            cursor: default;
+        }
+        .sidebar input:disabled {
+            background: var(--readonly-bg);
+            color: #94a3b8;
             cursor: not-allowed;
         }
+        .sidebar input:disabled::placeholder { color: #94a3b8; }
         .content {
             flex: 1 1 auto;
             display: flex;
@@ -108,9 +138,13 @@
             min-width: 90px;
         }
         .main-controls-row label {
-            font-size: 13px;
-            color: #cbd5e1;
-            margin-bottom: 2px;
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
         }
         .main-controls-row input {
             background: var(--input-bg);
@@ -145,13 +179,36 @@
             gap: 8px;
         }
         .connector-card legend {
-            color: var(--primary-color);
             font-size: 1em;
-            padding: 0 6px;
+            padding: 0;
         }
-        .connector-card label {
+        .connector-card legend span {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
             font-size: 12px;
-            color: #cbd5e1;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            background: #e2e8f0;
+            color: var(--text-muted);
+            transition: background 0.2s, color 0.2s;
+        }
+        .connector-card legend span.is-idle {
+            background: var(--warning-soft);
+            color: var(--warning-color);
+        }
+        .connector-card legend span.is-charging {
+            background: var(--success-soft);
+            color: var(--success-color);
+        }
+        .connector-card label, .tag-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
         }
         .connector-card input, .connector-card select {
             background: var(--input-bg);
@@ -196,9 +253,20 @@
             margin: 0;
         }
         #console li {
-            margin-bottom: 3px;
-            border-bottom: 1px solid #2226;
-            padding-bottom: 2px;
+            margin-bottom: 2px;
+            border-bottom: 1px solid var(--card-border);
+            padding: 3px 4px;
+            border-left: 3px solid transparent;
+        }
+        #console li.sent { color: var(--accent-color); }
+        #console li.bad {
+            color: var(--danger-color);
+            border-left-color: var(--danger-color);
+            background: #fef2f2;
+        }
+        #console li.good {
+            color: var(--success-color);
+            border-left-color: var(--success-color);
         }
         button {
             background: var(--primary-color);
@@ -213,15 +281,13 @@
             font-weight: 500;
             box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         }
-        button:hover {
-            background: var(--accent-color);
-        }
-        button#connect {
-            background: var(--success-color);
-        }
-        button#stop1, button#stop2 {
-            background: var(--danger-color);
-        }
+        button:hover { background: var(--primary-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button#connect { background: var(--success-color); }
+        button#connect.connected { background: var(--danger-color); }
+        button#connect.connected:hover { background: var(--danger-hover); }
+        button#stop1, button#stop2 { background: var(--danger-color); }
+        button#stop1:hover, button#stop2:hover { background: var(--danger-hover); }
         @media (max-width: 1100px) {
             .content {
                 padding: 16px 4px 12px 4px;
@@ -263,7 +329,7 @@
                 </div>
                 <div>
                     <label>Charger ID</label>
-                    <input id="chargerId" type="text" placeholder="Charger ID" value="CHGR-0010-HHI08" onchange="updateCentralStation()" />
+                    <input id="chargerId" type="text" placeholder="Charger ID" value="CP-MANUAL-1" onchange="updateCentralStation()" />
                 </div>
                 <div>
                     <label>URL (Auto-generated)</label>
@@ -271,7 +337,7 @@
                 </div>
                 <div>
                     <label>Password</label>
-                    <input id="PASSWORD" type="text" class="FullLine" placeholder="Authentication" value=""/>
+                    <input id="PASSWORD" type="text" class="FullLine" placeholder="Unused - the gateway has no auth" value="" disabled />
                 </div>
             </div>
         </aside>
@@ -279,7 +345,7 @@
             <div class="main-controls-row">
                 <div class="tag-group">
                     <label>Tag</label>
-                    <input id="TAG" type="text" placeholder="Tag" value="1" />
+                    <input id="TAG" type="text" placeholder="Tag" value="TAG-MANUAL" />
                 </div>
                 <div class="charging-controls">
                     <button id="connect">Connect</button>
@@ -296,7 +362,7 @@
                         <button id="stop1">Stop</button>
                     </div>
                     <label>Power.Active.Import</label>
-                    <input id="pai1" type="text" placeholder="Meter value" value="1000" />
+                    <input id="pai1" type="text" placeholder="Watts" value="11000" />
                     <label>State of Charge</label>
                     <input id="soc1" type="text" placeholder="SoC" value="23" oninput="handleSoCChange(1)"/>
                     <label>Status</label>
@@ -320,7 +386,7 @@
                         <button id="stop2">Stop</button>
                     </div>
                     <label>Power.Active.Import</label>
-                    <input id="pai2" type="text" placeholder="Meter value" value="1000" />
+                    <input id="pai2" type="text" placeholder="Watts" value="11000" />
                     <label>State of Charge</label>
                     <input id="soc2" type="text" placeholder="SoC" value="63" oninput="handleSoCChange(2)"/>
                     <label>Status</label>
@@ -522,6 +588,7 @@
 
             if (_websocket) {
                 closedByUser = true;
+                $('#connect').removeClass('connected');
                 setConnectionStatus(false, 1);
                 setConnectionStatus(false, 2);
                 _websocket.close(3001);
@@ -541,7 +608,7 @@
                     setConnectionStatus(true, 2);
                     BootNotification();
 
-                    $('#connect').text('Disconnect').css('background', 'green');
+                    $('#connect').text('Disconnect').addClass('connected');
                     startPing();
                 };
 
@@ -646,7 +713,7 @@
                 };
 
                 _websocket.onclose = function (evt) {
-                    $('#connect').text('Connect').css('background', '#369');
+                    $('#connect').text('Connect').removeClass('connected');
                     stopAllTimers();
                     clearPendingStarts();
                     _websocket = null;
@@ -695,7 +762,11 @@
 
         function logMsg(err) {
             console.log(err);
-            $('#console').append('<li>' + err + '</li>');
+            var text = String(err);
+            var kind = /error|reject|fail|invalid|expired|blocked|not sent|CALLERROR|giving up/i.test(text) ? 'bad'
+                     : /accepted|connected|unlocked/i.test(text) ? 'good'
+                     : '';
+            $('#console').append($('<li>').addClass(kind).text(text));
         }
 
         function Authorize(){
@@ -929,26 +1000,15 @@
 
         function setConnectionStatus(connected, connectorId)
         {
-            if (connected)
-            {
-                setTransactionStatus(connectorId, false);
-            }
-            else
-            {
-                $('#connector'+connectorId).css("background-color", "");
-            }
+            if (connected) setTransactionStatus(connectorId, false);
+            else $('#connector' + connectorId).removeClass('is-idle is-charging');
         }
 
         function setTransactionStatus(connectorId, active)
         {
-            if (active){
-                $('#connector'+connectorId).css("background-color", "green");
-            }
-
-            else{
-                $('#connector'+connectorId).css("background-color", "#C0C000");
-            }
-
+            $('#connector' + connectorId)
+                .toggleClass('is-charging', !!active)
+                .toggleClass('is-idle', !active);
         }
 
         function startPing() {
