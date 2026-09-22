@@ -1,0 +1,14 @@
+{
+  "name": "cpms-simulator-test",
+  "private": true,
+  "description": "Runs the browser simulator's script in Node against a fake CSMS and against the real gateway.",
+  "scripts": {
+    "test": "node tests.js && node spec.js",
+    "live": "node live.js",
+    "twotab": "node twotab.js"
+  },
+  "dependencies": {
+    "ajv": "^6.12.6",
+    "ws": "^8.18.0"
+  }
+}

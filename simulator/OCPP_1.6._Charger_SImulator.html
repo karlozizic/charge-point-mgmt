@@ -1,24 +1,31 @@
 <html>
 <head>
+    <meta charset="utf-8">
     <title>ChargePoint Simulator</title>
     <style>
         :root {
-            --primary-color: #2563eb;
-            --secondary-color: #f8fafc;
-            --accent-color: #0ea5e9;
-            --success-color: #16a34a;
-            --warning-color: #ca8a04;
-            --danger-color: #dc2626;
+            --primary-color: #1d4ed8;
+            --primary-hover: #1e40af;
+            --accent-color: #0369a1;
+            --success-color: #15803d;
+            --success-soft: #dcfce7;
+            --warning-color: #a16207;
+            --warning-soft: #fef3c7;
+            --danger-color: #b91c1c;
+            --danger-hover: #991b1b;
             --background-color: #ffffff;
             --sidebar-bg: #f1f5f9;
+            --sidebar-border: #dbe3ec;
+            --readonly-bg: #eef2f7;
             --card-bg: #f8fafc;
-            --text-color: #1e293b;
+            --card-border: #e2e8f0;
+            --text-color: #0f172a;
+            --text-muted: #475569;
             --border-radius: 6px;
             --input-bg: #ffffff;
             --input-border: #cbd5e1;
-            --console-bg: #f8fafc;
-            --console-text: #475569;
-            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --console-text: #334155;
+            --shadow: 0 1px 3px rgba(15,23,42,0.08);
         }
         html, body {
             height: 100%;
@@ -41,48 +48,72 @@
         }
         .sidebar {
             background: var(--sidebar-bg);
+            border-right: 1px solid var(--sidebar-border);
+            color: var(--text-color);
             min-width: 220px;
             max-width: 260px;
             padding: 24px 16px 18px 16px;
             display: flex;
             flex-direction: column;
             gap: 18px;
-            box-shadow: var(--shadow);
         }
         .sidebar h1 {
             font-size: 1.2em;
             color: var(--primary-color);
             margin-bottom: 18px;
             text-align: left;
+            line-height: 1.35;
         }
         .sidebar .connection-info {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            background: var(--card-bg);
+            gap: 12px;
+            background: var(--background-color);
+            border: 1px solid var(--card-border);
             border-radius: var(--border-radius);
             padding: 14px 12px;
             box-shadow: var(--shadow);
         }
         .sidebar label {
-            font-size: 13px;
-            color: #cbd5e1;
-            margin-bottom: 2px;
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
         }
         .sidebar input, .sidebar select {
+            width: 100%;
+            box-sizing: border-box;
             background: var(--input-bg);
             border: 1px solid var(--input-border);
             color: var(--text-color);
             padding: 7px 10px;
             border-radius: var(--border-radius);
             font-size: 13px;
-            margin-bottom: 0;
         }
+        .sidebar input:focus, .sidebar select:focus,
+        .content input:focus, .content select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(29,78,216,0.15);
+        }
+        /* Generated, not typed: reads as output rather than an empty field. */
         .sidebar input[readonly] {
-            background: #222b3a;
-            color: #64748b;
+            background: var(--readonly-bg);
+            border-style: dashed;
+            color: var(--text-muted);
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 11px;
+            cursor: default;
+        }
+        .sidebar input:disabled {
+            background: var(--readonly-bg);
+            color: #94a3b8;
             cursor: not-allowed;
         }
+        .sidebar input:disabled::placeholder { color: #94a3b8; }
         .content {
             flex: 1 1 auto;
             display: flex;
@@ -107,9 +138,13 @@
             min-width: 90px;
         }
         .main-controls-row label {
-            font-size: 13px;
-            color: #cbd5e1;
-            margin-bottom: 2px;
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
         }
         .main-controls-row input {
             background: var(--input-bg);
@@ -144,13 +179,36 @@
             gap: 8px;
         }
         .connector-card legend {
-            color: var(--primary-color);
             font-size: 1em;
-            padding: 0 6px;
+            padding: 0;
         }
-        .connector-card label {
+        .connector-card legend span {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
             font-size: 12px;
-            color: #cbd5e1;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            background: #e2e8f0;
+            color: var(--text-muted);
+            transition: background 0.2s, color 0.2s;
+        }
+        .connector-card legend span.is-idle {
+            background: var(--warning-soft);
+            color: var(--warning-color);
+        }
+        .connector-card legend span.is-charging {
+            background: var(--success-soft);
+            color: var(--success-color);
+        }
+        .connector-card label, .tag-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
         }
         .connector-card input, .connector-card select {
             background: var(--input-bg);
@@ -195,9 +253,20 @@
             margin: 0;
         }
         #console li {
-            margin-bottom: 3px;
-            border-bottom: 1px solid #2226;
-            padding-bottom: 2px;
+            margin-bottom: 2px;
+            border-bottom: 1px solid var(--card-border);
+            padding: 3px 4px;
+            border-left: 3px solid transparent;
+        }
+        #console li.sent { color: var(--accent-color); }
+        #console li.bad {
+            color: var(--danger-color);
+            border-left-color: var(--danger-color);
+            background: #fef2f2;
+        }
+        #console li.good {
+            color: var(--success-color);
+            border-left-color: var(--success-color);
         }
         button {
             background: var(--primary-color);
@@ -212,15 +281,13 @@
             font-weight: 500;
             box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         }
-        button:hover {
-            background: var(--accent-color);
-        }
-        button#connect {
-            background: var(--success-color);
-        }
-        button#stop1, button#stop2 {
-            background: var(--danger-color);
-        }
+        button:hover { background: var(--primary-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button#connect { background: var(--success-color); }
+        button#connect.connected { background: var(--danger-color); }
+        button#connect.connected:hover { background: var(--danger-hover); }
+        button#stop1, button#stop2 { background: var(--danger-color); }
+        button#stop1:hover, button#stop2:hover { background: var(--danger-hover); }
         @media (max-width: 1100px) {
             .content {
                 padding: 16px 4px 12px 4px;
@@ -262,7 +329,7 @@
                 </div>
                 <div>
                     <label>Charger ID</label>
-                    <input id="chargerId" type="text" placeholder="Charger ID" value="CHGR-0010-HHI08" onchange="updateCentralStation()" />
+                    <input id="chargerId" type="text" placeholder="Charger ID" value="CP-MANUAL-1" onchange="updateCentralStation()" />
                 </div>
                 <div>
                     <label>URL (Auto-generated)</label>
@@ -270,7 +337,7 @@
                 </div>
                 <div>
                     <label>Password</label>
-                    <input id="PASSWORD" type="text" class="FullLine" placeholder="Authentication" value=""/>
+                    <input id="PASSWORD" type="text" class="FullLine" placeholder="Unused - the gateway has no auth" value="" disabled />
                 </div>
             </div>
         </aside>
@@ -278,7 +345,7 @@
             <div class="main-controls-row">
                 <div class="tag-group">
                     <label>Tag</label>
-                    <input id="TAG" type="text" placeholder="Tag" value="1" />
+                    <input id="TAG" type="text" placeholder="Tag" value="TAG-MANUAL" />
                 </div>
                 <div class="charging-controls">
                     <button id="connect">Connect</button>
@@ -295,7 +362,7 @@
                         <button id="stop1">Stop</button>
                     </div>
                     <label>Power.Active.Import</label>
-                    <input id="pai1" type="text" placeholder="Meter value" value="1000" />
+                    <input id="pai1" type="text" placeholder="Watts" value="11000" />
                     <label>State of Charge</label>
                     <input id="soc1" type="text" placeholder="SoC" value="23" oninput="handleSoCChange(1)"/>
                     <label>Status</label>
@@ -319,7 +386,7 @@
                         <button id="stop2">Stop</button>
                     </div>
                     <label>Power.Active.Import</label>
-                    <input id="pai2" type="text" placeholder="Meter value" value="1000" />
+                    <input id="pai2" type="text" placeholder="Watts" value="11000" />
                     <label>State of Charge</label>
                     <input id="soc2" type="text" placeholder="SoC" value="63" oninput="handleSoCChange(2)"/>
                     <label>Status</label>
@@ -349,33 +416,96 @@
             crossorigin="anonymous"></script>
 
     <script>
-        var c = 0;
         var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        var id = randomId();
         var _websocket = null;
-        var connector_locked = false;
+        var connectorLocked = {1: false, 2: false};
         var pingInterval = null;
+        var hbInterval = null;
+        var bootRetryTimer = null;
+
+        // Until BootNotification is Accepted the charge point may only answer the CSMS (OCPP 1.6 4.2.1).
+        var bootPending = false;
+        var bootAccepted = false;
+
+        // Answers are matched on the CALL's uniqueId, which OCPP echoes in the CALLRESULT.
+        var pendingStarts = {};
+
+        // Reconnect backoff. Without it a closed gateway produces an unbounded retry loop, and two tabs
+        // sharing a charger id close each other forever: the gateway drops the older socket with 1000.
+        var RECONNECT_MAX_ATTEMPTS = 10;
+        var RECONNECT_BASE_DELAY = 1000;
+        var RECONNECT_MAX_DELAY = 30000;
+        var reconnectAttempts = 0;
+        var reconnectTimer = null;
+        var closedByUser = false;
 
         var batteryCapacity = {1: 50000, 2: 50000};
         var initialSoC = {1: $("#soc1").val(), 2: $("#soc2").val()};
         var currentSoC = {1: $("#soc1").val(), 2: $("#soc2").val()};
         var electricityConsumed = {1: 0, 2: 0};
         var meterValInterval = {1: null, 2: null};
-        const METER_VALUES_INTERVAL = 15000;
+        var meterValuesInterval = 15000;
+
+        var READONLY_KEYS = ["NumberOfConnectors"];
+        var configuration = {
+            AllowOfflineTxForUnknownId: "false",
+            HeartbeatInterval: "300",
+            MeterValueSampleInterval: "15",
+            NumberOfConnectors: "2"
+        };
+
+        function isConnector(connectorId) { return connectorId === 1 || connectorId === 2; }
+        function isCharging(connectorId) { return sessionStorage.getItem('TransactionInProgress' + connectorId) === 'true'; }
+        function transactionIdOf(connectorId) { return Number(sessionStorage.getItem('TransactionId' + connectorId)); }
+
+        function connectorOfTransaction(transactionId) {
+            if (isCharging(1) && transactionIdOf(1) === transactionId) return 1;
+            if (isCharging(2) && transactionIdOf(2) === transactionId) return 2;
+            return null;
+        }
+
+        function freeConnector() { return !isCharging(1) ? 1 : (!isCharging(2) ? 2 : null); }
+
+        function configurationKeys() {
+            var keys = [];
+            for (var key in configuration) {
+                keys.push({key: key, readonly: READONLY_KEYS.indexOf(key) >= 0, value: configuration[key]});
+            }
+            return keys;
+        }
+
+        function changeConfiguration(key, value) {
+            if (!(key in configuration)) return "NotSupported";
+            if (READONLY_KEYS.indexOf(key) >= 0) return "Rejected";
+
+            if (key === "HeartbeatInterval" || key === "MeterValueSampleInterval") {
+                var seconds = Number(value);
+                if (!isFinite(seconds) || seconds <= 0) return "Rejected";
+                configuration[key] = String(seconds);
+                if (key === "HeartbeatInterval") startHB(seconds * 1000);
+                else { meterValuesInterval = seconds * 1000; restartMeterTimers(); }
+                return "Accepted";
+            }
+
+            configuration[key] = String(value);
+            return "Accepted";
+        }
 
         function handleSoCChange(connectorId) {
             const newSoC = document.getElementById("soc" + connectorId).value;
             initialSoC[connectorId] = newSoC;
             currentSoC[connectorId] = newSoC;
+            electricityConsumed[connectorId] = 0;   // the old total was measured against the old baseline
         }
 
         function prepareMeterValues(connectorId) {
             var currentElectricityConsumed = electricityConsumed[connectorId];
             var currentLocalSoC = currentSoC[connectorId];
-            var currentPower = document.getElementById("pai" + connectorId).value;
+            var currentPower = Number(document.getElementById("pai" + connectorId).value);
+            if (!isFinite(currentPower) || currentPower < 0) currentPower = 0;
 
             if (Number(currentLocalSoC) < 100) {
-                currentElectricityConsumed = currentElectricityConsumed + (currentPower / 60000 / 60 * METER_VALUES_INTERVAL);
+                currentElectricityConsumed = currentElectricityConsumed + (currentPower / 60000 / 60 * meterValuesInterval);
                 currentLocalSoC = (((Number(initialSoC[connectorId]) / 100) * batteryCapacity[connectorId] + currentElectricityConsumed) / batteryCapacity[connectorId] * 100).toString();
                 if (Number(currentLocalSoC) >= 100) {
                     currentSoC[connectorId] = '100';
@@ -425,11 +555,11 @@
         }
 
         function randomId() {
-            id = "";
+            var value = "";
             for (var i = 0; i < 36; i++) {
-                id += possible.charAt(Math.floor(Math.random() * possible.length));
+                value += possible.charAt(Math.floor(Math.random() * possible.length));
             }
-            return id;
+            return value;
         }
 
         function generatePassword(bytesLength = 20) {
@@ -445,6 +575,9 @@
 
 
         function wsConnect() {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+
             var wsurl = $('#environment').val();
             var CP = $('#CP').val();
             
@@ -454,8 +587,10 @@
             
 
             if (_websocket) {
-                setConnectionStatus(false);
-                clearInterval(pingInterval);
+                closedByUser = true;
+                $('#connect').removeClass('connected');
+                setConnectionStatus(false, 1);
+                setConnectionStatus(false, 2);
                 _websocket.close(3001);
             } else {
                 var usernamePassword = username + ":" + password;
@@ -466,146 +601,159 @@
 
                 _websocket = new WebSocket(wsUrlWithParams, ["ocpp1.6", "ocpp1.5", "simulator"]);
                 _websocket.onopen = function (authorizationData) {
-                    sessionStorage.setItem('LastAction', "BootNotification");
-                    setConnectionStatus(true);
+                    reconnectAttempts = 0;
+                    closedByUser = false;
+                    bootAccepted = false;
+                    setConnectionStatus(true, 1);
+                    setConnectionStatus(true, 2);
                     BootNotification();
 
-                    $('#connect').text('Disconnect').css('background', 'green');
+                    $('#connect').text('Disconnect').addClass('connected');
                     startPing();
                 };
 
                 _websocket.onmessage = function (msg) {
-                    c++;
                     var ddata = (JSON.parse(msg.data));
 
-                    if (c == 1) {
-                        var hb_interval = handleData(ddata);
-                        sessionStorage.setItem("Configuration", hb_interval);
-                        startHB(hb_interval * 1000);
+                    if (ddata[0] === 3 && bootPending) {
+                        bootPending = false;
+                        handleBootResponse(ddata[2] || {});
+                        return;
                     }
 
                     if (ddata[0] === 3) {
-                        la = getLastAction();
+                        if (pendingStarts[ddata[1]] !== undefined) {
+                            var connectorId = pendingStarts[ddata[1]];
+                            delete pendingStarts[ddata[1]];
+                            var info = (ddata[2] || {}).idTagInfo;
 
-                        if (la && la.startsWith("startTransaction")) {
-                            try {
-                                var connectorId = la.slice(-1);
-                                var dd = ddata[2];
-                                
-                                if (dd && dd.idTagInfo && dd.idTagInfo.status) {
-                                    var status = dd.idTagInfo.status;
-                                    var txId = dd.transactionId;
-
-                                    if (status == 'Accepted') {
-                                        logMsg("Data exchange successful!");
-                                        sessionStorage.setItem('TransactionId' + connectorId, txId);
-                                        setTransactionStatus(parseInt(connectorId), true);
-                                    } else {
-                                        logMsg("Transaction rejected: " + status);                               
-                                    }
-                                }
-                            } catch (error) {
-                                logMsg("Error processing start transaction response: " + error.message);
+                            if (info && info.status === 'Accepted') {
+                                sessionStorage.setItem('TransactionId' + connectorId, ddata[2].transactionId);
+                                beginCharging(connectorId);
+                            } else {
+                                logMsg("Transaction rejected: " + (info ? info.status : "no idTagInfo"));
+                                abortStart(connectorId);
                             }
                         }
-                        
+
                         logMsg("Response: " + JSON.stringify(ddata[2]));
 
                     } else if (ddata[0] === 4) {
-                        logMsg("Data exchange failed - JSON is not accepted!");
+                        logMsg("CALLERROR " + ddata[2] + ": " + ddata[3]);
                     } else if (ddata[0] === 2) {
-                        logMsg("Message Type " + ddata[2]);
-                        id = ddata[1];
+                        var serverId = ddata[1];
+                        var req = ddata[3] || {};
+                        logMsg("Request: " + ddata[2]);
 
                         switch (ddata[2]) {
-                            case "GetConfiguration":
-                                var confRes = JSON.stringify([3, id, {"configurationKey": [
-                                    {"key": "AllowOfflineTxForUnknownId", "readonly": false, "value": "false"},
-                                    {"key": "HeartbeatInterval", "readonly": false, "value": "300"},
-                                    {"key": "MeterValueSampleInterval", "readonly": false, "value": "15"},
-                                    {"key": "NumberOfConnectors", "readonly": true, "value": "2"}
-                                ]}]);
-                                _websocket.send(confRes);
+                            case "GetConfiguration": {
+                                var known = configurationKeys();
+                                var wanted = req.key;
+                                var answer = {configurationKey: wanted ? known.filter(function (k) { return wanted.indexOf(k.key) >= 0; }) : known};
+                                if (wanted) {
+                                    answer.unknownKey = wanted.filter(function (k) { return !(k in configuration); });
+                                }
+                                sendResult(serverId, answer);
                                 break;
-                            case "Reset":
-                                //Reset type SOFT, HARD
-                                var ResetS = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(ResetS);
-                                location.reload();
-                                break;
-                                
-                            case "RemoteStopTransaction":
-                                //TransactionID
-                                var remStp = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(remStp);
-                                var transactionId = ddata[3].transactionId;
-                                var connectorId = undefined;
-                                if (transactionId === Number(sessionStorage.getItem('TransactionId1'))) 
-                                    connectorId = 1;
-                                else if (transactionId === Number(sessionStorage.getItem('TransactionId2'))) 
-                                    connectorId = 2;
-                                var stop_id = (JSON.parse(msg.data)[3].transactionId);
-                                stopTransaction(connectorId,stop_id);
-                                break;
-                            case "RemoteStartTransaction":
-                                //Need to get idTag, connectorId (map - ddata[3])
-                                var remStrt = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(remStrt);
-                                var connectorId = ddata[3].connectorId;
-                                var idTag = ddata[3].idTag;
-                                logMsg("IdTag got from RemoteStartTranasaction is: " + idTag)
-                                startTransaction(connectorId, idTag);
-                                break;
-
-                            case "UnlockConnector": /////////ERROR!!!!!!!!
-                                //connectorId
-                                var UC = JSON.stringify([3, id, {"status": "Unlocked"}]);
-                                _websocket.send(UC);
-                                 connector_locked = false;
-                                setTransactionStatus(1, false);
-                                logMsg("Connector status changed to: "+connector_locked);
-                                break;
+                            }
 
                             case "ChangeConfiguration":
-                                var confs = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(confs);
+                                sendResult(serverId, {status: changeConfiguration(req.key, req.value)});
                                 break;
 
-                            case "ChangeAvailability":
-                                var remStrt = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(remStrt);
+                            case "Reset":
+                                sendResult(serverId, {status: "Accepted"});
+                                setTimeout(function () { location.reload(); }, 500);
                                 break;
-                                
+
+                            case "RemoteStopTransaction": {
+                                var stopConnector = connectorOfTransaction(req.transactionId);
+                                sendResult(serverId, {status: stopConnector ? "Accepted" : "Rejected"});
+                                if (stopConnector) stopTransaction(stopConnector, req.transactionId, "Remote");
+                                break;
+                            }
+
+                            case "RemoteStartTransaction": {
+                                var target = req.connectorId === undefined ? freeConnector() : req.connectorId;
+                                var canStart = isConnector(target) && !isCharging(target);
+                                sendResult(serverId, {status: canStart ? "Accepted" : "Rejected"});
+                                if (canStart) startTransaction(target, req.idTag);
+                                break;
+                            }
+
+                            case "UnlockConnector": {
+                                if (!isConnector(req.connectorId)) {
+                                    sendResult(serverId, {status: "UnlockFailed"});
+                                    break;
+                                }
+                                if (isCharging(req.connectorId)) stopTransaction(req.connectorId, false, "UnlockCommand");
+                                connectorLocked[req.connectorId] = false;
+                                setTransactionStatus(req.connectorId, false);
+                                sendResult(serverId, {status: "Unlocked"});
+                                break;
+                            }
+
+                            case "ChangeAvailability": {
+                                var scope = req.connectorId;
+                                if (scope !== 0 && !isConnector(scope)) sendResult(serverId, {status: "Rejected"});
+                                else if (isCharging(1) || isCharging(2)) sendResult(serverId, {status: "Scheduled"});
+                                else sendResult(serverId, {status: "Accepted"});
+                                break;
+                            }
+
                             case "SetChargingProfile":
-                                var confs = JSON.stringify([3, id, {"status": "Accepted"}]);
-                                _websocket.send(confs);
+                                sendResult(serverId, {status: req.csChargingProfiles ? "Accepted" : "Rejected"});
                                 break;
 
                             default:
-                                var error = JSON.stringify([4, id]);
-                                _websocket.send(error);
+                                sendError(serverId, "NotImplemented", "Unknown action " + ddata[2]);
                                 break;
                         }
                     }
                 };
 
                 _websocket.onclose = function (evt) {
-                    $('#connect').text('Connect').css('background', '#369');
-                    clearInterval(pingInterval);
-                    if (evt.code == 3001) {
+                    $('#connect').text('Connect').removeClass('connected');
+                    stopAllTimers();
+                    clearPendingStarts();
+                    _websocket = null;
+                    bootPending = false;
+                    bootAccepted = false;
+                    setConnectionStatus(false, 1);
+                    setConnectionStatus(false, 2);
+
+                    if (closedByUser || evt.code == 3001) {
                         logMsg('ws closed');
-                        _websocket = null;
-                    } else {
-                        logMsg('ws connection error: ' + evt.code);
-                        $('#console').html("");
-                        _websocket = null;
-                        wsConnect();
+                        closedByUser = false;
+                        reconnectAttempts = 0;
+                        return;
                     }
+
+                    // The gateway closes the previous socket with 1000 when the same charger id
+                    // connects again. Reconnecting here would make two tabs evict each other forever.
+                    if (evt.code == 1000) {
+                        logMsg('ws closed by the server (1000). Not reconnecting — another tab may hold this charger id.');
+                        reconnectAttempts = 0;
+                        return;
+                    }
+
+                    if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
+                        logMsg('ws connection error: ' + evt.code + '. Giving up after ' + reconnectAttempts + ' attempts; press Connect to retry.');
+                        reconnectAttempts = 0;
+                        return;
+                    }
+
+                    var delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts), RECONNECT_MAX_DELAY);
+                    reconnectAttempts++;
+                    logMsg('ws connection error: ' + evt.code + '. Reconnect attempt ' + reconnectAttempts + ' in ' + Math.round(delay / 1000) + 's.');
+                    reconnectTimer = setTimeout(wsConnect, delay);
                 };
 
                 _websocket.onerror = function (evt) {
-                    if (_websocket.readyState == 1) {
-                        setConnectionStatus(false);
+                    // onclose may already have cleared the socket when a late error arrives.
+                    if (_websocket && _websocket.readyState == 1) {
+                        setConnectionStatus(false, 1);
+                        setConnectionStatus(false, 2);
                         logMsg('ws normal error: ' + evt.type);
                     }
                 };
@@ -614,204 +762,253 @@
 
         function logMsg(err) {
             console.log(err);
-            $('#console').append('<li>' + err + '</li>');
+            var text = String(err);
+            var kind = /error|reject|fail|invalid|expired|blocked|not sent|CALLERROR|giving up/i.test(text) ? 'bad'
+                     : /accepted|connected|unlocked/i.test(text) ? 'good'
+                     : '';
+            $('#console').append($('<li>').addClass(kind).text(text));
         }
 
         function Authorize(){
-            sessionStorage.setItem('LastAction', "Authorize");
-            var Auth = JSON.stringify([2, id, "Authorize", {"idTag": $("#TAG").val()}]);
-            _websocket.send(Auth);
+            sendCall("Authorize", {idTag: $("#TAG").val()});
         }
      
+        // A transaction only exists once the CSMS answers Accepted. Until then this function must not
+        // set TransactionInProgress, report Charging, or start the meter timer: a rejected tag would
+        // leave the timer running forever, sending MeterValues under a stale or missing transaction id.
         function startTransaction(connectorId, idTag = null){
-            sessionStorage.setItem('TransactionInProgress'+connectorId, true)
-            connector_locked = true;
+            connectorId = parseInt(connectorId);
+            connectorLocked[connectorId] = true;
             document.getElementById("soc" + connectorId).setAttribute('readonly', true);
-            //document.getElementById("pai" + connectorId).setAttribute('readonly', true);
-
-            logMsg("Connector"+connectorId+" status changed to: " + connector_locked);
 
             // added because of anonymous users
             if (idTag == null) {
                 idTag = $("#TAG").val();
             }
             else
-            { 
+            {
                 sessionStorage.setItem('idTag', idTag);
             }
 
-            var strtT = JSON.stringify([2, id, "StartTransaction", {
-                "connectorId": connectorId,
-                "idTag": idTag,
-                "timestamp": formatDate(new Date()),
-                "meterStart": 0,
-                "reservationId": 0
-            }]);
+            var callId = sendCall("StartTransaction", {
+                connectorId: connectorId,
+                idTag: idTag,
+                timestamp: formatDate(new Date()),
+                meterStart: 0
+            });
 
-            document.getElementById("statusValue" + connectorId).value = "Charging"
-            send_StatusNotification(connectorId)
-            sessionStorage.setItem('LastAction', "startTransaction"+connectorId);
-
-            let num = 1
-            meterValInterval[connectorId] = setInterval(() => {
-                prepareMeterValues(connectorId);
-            }, METER_VALUES_INTERVAL)
-
-            _websocket.send(strtT);
+            if (callId === null) { abortStart(connectorId); return; }
+            pendingStarts[callId] = connectorId;
         }
 
-        function stopTransaction(connectorId, transaction_id = false){
-            transaction_id == false ? ssid = sessionStorage.getItem('TransactionId'+ connectorId) : ssid = transaction_id;
-            if (ssid == null || isNaN(parseInt(ssid))) {
+        // Called from the StartTransaction CALLRESULT once the CSMS accepted the tag.
+        function beginCharging(connectorId){
+            connectorId = parseInt(connectorId);
+            sessionStorage.setItem('TransactionInProgress'+connectorId, true);
+            setTransactionStatus(connectorId, true);
+
+            document.getElementById("statusValue" + connectorId).value = "Charging";
+            send_StatusNotification(connectorId);
+            startMeterTimer(connectorId);
+        }
+
+        function startMeterTimer(connectorId){
+            clearInterval(meterValInterval[connectorId]);
+            meterValInterval[connectorId] = setInterval(function () {
+                prepareMeterValues(connectorId);
+            }, meterValuesInterval);
+        }
+
+        function restartMeterTimers(){
+            if (meterValInterval[1]) startMeterTimer(1);
+            if (meterValInterval[2]) startMeterTimer(2);
+        }
+
+        // Called when the CSMS rejected the tag. Undoes what startTransaction changed.
+        function abortStart(connectorId){
+            connectorId = parseInt(connectorId);
+            connectorLocked[connectorId] = false;
+            document.getElementById("soc" + connectorId).removeAttribute('readonly');
+            sessionStorage.setItem('TransactionInProgress'+connectorId, false);
+            sessionStorage.removeItem('TransactionId'+connectorId);
+            setTransactionStatus(connectorId, false);
+        }
+
+        function stopTransaction(connectorId, transaction_id = false, reason = "Local"){
+            connectorId = parseInt(connectorId);
+            var ssid = transaction_id === false ? sessionStorage.getItem('TransactionId' + connectorId) : transaction_id;
+            if (ssid === null || isNaN(parseInt(ssid))) {
                 logMsg("No transaction to stop on connector " + connectorId);
                 return;
             }
-            connector_locked = false;
+
+            connectorLocked[connectorId] = false;
             document.getElementById("soc" + connectorId).removeAttribute('readonly');
-            //document.getElementById("pai" + connectorId).removeAttribute('readonly');
-            logMsg("Connector"+connectorId+" status changed to: " + connector_locked);
             setConnectionStatus(true, connectorId);
 
             // added because of anonymous users
             var idTag = sessionStorage.getItem('idTag');
+            if (idTag == null) idTag = $("#TAG").val();
 
-            if (idTag == null)
-                idTag = $("#TAG").val();
-
-            var meterVal = parseInt(electricityConsumed[connectorId]);  
-            if (isNaN(meterVal) || meterVal === 0) {  
-                meterVal = 2000;  
-            }
-            var stpT = JSON.stringify([2, id, "StopTransaction",{
-                "transactionId": parseInt(ssid),
-                "idTag": idTag,
-                "timestamp": formatDate(new Date()),
-                "meterStop": meterVal
-            }]);
-            electricityConsumed[connectorId] = 0;
-
-            console.log("Clearing interval...")
             clearInterval(meterValInterval[connectorId]);
             meterValInterval[connectorId] = null;
-            sessionStorage.setItem('TransactionInProgress'+connectorId, false)
+            sessionStorage.setItem('TransactionInProgress' + connectorId, false);
+            sessionStorage.removeItem('TransactionId' + connectorId);
 
-            sessionStorage.setItem('LastAction', "stopTransaction"+connectorId);
-            _websocket.send(stpT);
-            document.getElementById("statusValue" + connectorId).value = "Available"
+            sendCall("StopTransaction", {
+                transactionId: parseInt(ssid),
+                idTag: idTag,
+                timestamp: formatDate(new Date()),
+                meterStop: Math.round(electricityConsumed[connectorId]),
+                reason: reason
+            });
 
-            send_StatusNotification(connectorId)
-        }
-
-        function handleData(data, request = false){
-            var lastAction = getLastAction();
-            if(lastAction == "BootNotification"){
-                data = data[2];
-                heartbeat_interval = data.interval;
-                return heartbeat_interval;
-            }else if(lastAction.startsWith("StartTransaction")){
-                return "StartTransaction";
-            }else if (1==2){
-                alert("else");
-            }
-        }
-
-        function getLastAction(){
-            var LastAction = sessionStorage.getItem("LastAction");
-            return LastAction;
+            electricityConsumed[connectorId] = 0;
+            document.getElementById("statusValue" + connectorId).value = "Available";
+            send_StatusNotification(connectorId);
         }
 
         function BootNotification(){
-
-            var BN = JSON.stringify([2, id, "BootNotification", {
-                "chargePointVendor": "AVT-Company",
-                "chargePointModel": "AVT-Express",
-                "chargePointSerialNumber": "avt.001.13.1",
-                "chargeBoxSerialNumber": "avt.001.13.1.01",
-                "firmwareVersion": "0.9.87",
-                "iccid": "",
-                "imsi": "",
-                "meterType": "AVT NQC-ACDC",
-                "meterSerialNumber": "avt.001.13.1.01"
-            }]);
-
+            bootPending = true;
             logMsg('ws connected');
-            _websocket.send(BN);
-            send_StatusNotification(1)
-            send_StatusNotification(2)
+            sendCall("BootNotification", {
+                chargePointVendor: "AVT-Company",
+                chargePointModel: "AVT-Express",
+                chargePointSerialNumber: "avt.001.13.1",
+                chargeBoxSerialNumber: "avt.001.13.1.01",
+                firmwareVersion: "0.9.87",
+                meterType: "AVT NQC-ACDC",
+                meterSerialNumber: "avt.001.13.1.01"
+            });
+        }
+
+        // Accepted: normal operation. Pending or Rejected: send nothing but answers, and try again
+        // after `interval` seconds (OCPP 1.6 4.2.1).
+        function handleBootResponse(conf){
+            logMsg("BootNotification " + conf.status + ", interval " + conf.interval + "s");
+            sessionStorage.setItem("Configuration", conf.interval);
+
+            if (conf.status === "Accepted") {
+                bootAccepted = true;
+                startHB(Number(conf.interval) * 1000);
+                send_StatusNotification(1);
+                send_StatusNotification(2);
+                return;
+            }
+
+            bootAccepted = false;
+            stopAllTimers();
+            var retry = Math.max(Number(conf.interval) || 10, 1) * 1000;
+            bootRetryTimer = setTimeout(function () { if (socketReady()) BootNotification(); }, retry);
         }
 
         function startHB(interval){
             interval = isNaN(interval) || !interval ? 30000 : interval;
             logMsg("Setting heartbeat interval to "+interval);
-            if (interval)
-            setInterval(send_heartbeat,interval);
+            clearInterval(hbInterval);
+            hbInterval = setInterval(send_heartbeat, interval);
+        }
+
+        function socketReady() {
+            return _websocket && _websocket.readyState === WebSocket.OPEN;
+        }
+
+        function sendCall(action, payload) {
+            if (!socketReady()) {
+                logMsg(action + " not sent: no connection.");
+                return null;
+            }
+            if (!bootAccepted && action !== "BootNotification") {
+                logMsg(action + " not sent: BootNotification is not Accepted.");
+                return null;
+            }
+            var callId = randomId();
+            _websocket.send(JSON.stringify([2, callId, action, payload]));
+            return callId;
+        }
+
+        function sendResult(uniqueId, payload) {
+            if (socketReady()) _websocket.send(JSON.stringify([3, uniqueId, payload]));
+        }
+
+        // CALLERROR is [4, uniqueId, errorCode, errorDescription, errorDetails].
+        function sendError(uniqueId, errorCode, description) {
+            if (socketReady()) _websocket.send(JSON.stringify([4, uniqueId, errorCode, description, {}]));
+        }
+
+        // Every timer the socket owns. Leaving one running after a close makes it call send() on null.
+        function clearPendingStarts() {
+            for (var callId in pendingStarts) {
+                abortStart(pendingStarts[callId]);
+            }
+            pendingStarts = {};
+        }
+
+        function stopAllTimers() {
+            clearTimeout(bootRetryTimer);
+            bootRetryTimer = null;
+            clearInterval(pingInterval);
+            pingInterval = null;
+            clearInterval(hbInterval);
+            hbInterval = null;
+            for (var connectorId in meterValInterval) {
+                clearInterval(meterValInterval[connectorId]);
+                meterValInterval[connectorId] = null;
+            }
         }
 
         function send_heartbeat() {
-            sessionStorage.setItem('LastAction', "Heartbeat");
-            var HB = JSON.stringify([2, id, "Heartbeat", {}]);
-            _websocket.send(HB);
+            if (!socketReady()) {
+                clearInterval(hbInterval);
+                hbInterval = null;
+                return;
+            }
+            sendCall("Heartbeat", {});
         }
         
         function send_MeterValues(connectorId)
         {
-            sessionStorage.setItem('LastAction', "MeterValues"+connectorId);
-            if (sessionStorage.getItem('TransactionInProgress'+connectorId) == 'true')
-                trId = sessionStorage.getItem('TransactionId'+connectorId);
-            else
-                trId = 0;
-
-            ssid = parseInt(trId);
             connectorId = parseInt(connectorId);
-            var meterVal = electricityConsumed[connectorId].toString();
-            var pai = ($("#pai"+connectorId).val());
-            var socVal = currentSoC[connectorId];
-            var MV;
-            if (ssid == null)
-                MV = JSON.stringify([2, id, "MeterValues", {"connectorId": connectorId, "meterValue": [{"timestamp": formatDate(new Date()), "sampledValue": [{"value": meterVal, "measurand": "Energy.Active.Import.Register"},{"value": pai, "measurand": "Power.Active.Import"},{"value": socVal, "measurand": "SoC"}]}]}]);
-            else
-                MV = JSON.stringify([2, id, "MeterValues", {"connectorId": connectorId, "transactionId": ssid, "meterValue": [{"timestamp": formatDate(new Date()), "sampledValue": [{"value": meterVal, "measurand": "Energy.Active.Import.Register"},{"value": pai, "measurand": "Power.Active.Import"},{"value": socVal, "measurand": "SoC"}]}]}]);
-            _websocket.send(MV);
+            var power = Number($("#pai" + connectorId).val());
+            if (!isFinite(power) || power < 0) power = 0;
+
+            var payload = {
+                connectorId: connectorId,
+                meterValue: [{
+                    timestamp: formatDate(new Date()),
+                    sampledValue: [
+                        {value: String(Math.round(electricityConsumed[connectorId])), measurand: "Energy.Active.Import.Register", unit: "Wh", context: "Sample.Periodic"},
+                        {value: String(power), measurand: "Power.Active.Import", unit: "W", context: "Sample.Periodic"},
+                        {value: String(Math.round(Number(currentSoC[connectorId]) || 0)), measurand: "SoC", unit: "Percent", context: "Sample.Periodic"}
+                    ]
+                }]
+            };
+
+            if (isCharging(connectorId)) payload.transactionId = transactionIdOf(connectorId);
+            sendCall("MeterValues", payload);
         }
-        
+
         function send_StatusNotification(connectorId)
         {
-            sessionStorage.setItem('LastAction', "StatusNotification"+connectorId);
-            var statusVal = String($("#statusValue"+connectorId).val());
-            var SN = JSON.stringify([2, id, "StatusNotification", {
-                "connectorId": connectorId,
-                "status": statusVal,
-                "errorCode": "NoError",
-                "info": "null",
-                "timestamp": formatDate(new Date()),
-                "vendorId": "",
-                "vendorErrorCode": ""
-            }]);
-            _websocket.send(SN);
+            sendCall("StatusNotification", {
+                connectorId: parseInt(connectorId),
+                status: String($("#statusValue" + connectorId).val()),
+                errorCode: "NoError",
+                timestamp: formatDate(new Date())
+            });
         }
 
         function setConnectionStatus(connected, connectorId)
         {
-            if (connected)
-            {
-                setTransactionStatus(connectorId, false);
-            }
-            else
-            {
-                $('#connector'+connectorId).css("background-color", "");
-            }
+            if (connected) setTransactionStatus(connectorId, false);
+            else $('#connector' + connectorId).removeClass('is-idle is-charging');
         }
 
         function setTransactionStatus(connectorId, active)
         {
-            if (active){
-                $('#connector'+connectorId).css("background-color", "green");
-            }
-
-            else{
-                $('#connector'+connectorId).css("background-color", "#C0C000");
-            }
-
+            $('#connector' + connectorId)
+                .toggleClass('is-charging', !!active)
+                .toggleClass('is-idle', !active);
         }
 
         function startPing() {
@@ -824,7 +1021,8 @@
         }
 
         $( document ).ready(function() {
-            setConnectionStatus(false);
+            setConnectionStatus(false, 1);
+            setConnectionStatus(false, 2);
 
             //bind controls
             $('#connect').click(function () {
@@ -869,17 +1067,15 @@
             });
 
             $('#data_transfer').click(function () {
-                sessionStorage.setItem('LastAction', "DataTransfer");
-                var DT = JSON.stringify([2, id, "DataTransfer", {
-                    "vendorId": "rus.avt.cp",
-                    "messageId": "GetChargeInstruction",
-                    "data": ""
-                }]);
-                _websocket.send(DT);
+                sendCall("DataTransfer", {
+                    vendorId: "rus.avt.cp",
+                    messageId: "GetChargeInstruction"
+                });
             });
 
             $('#connect').on('change', function () {
                 if (_websocket) {
+                    closedByUser = true;
                     _websocket.close(3001);
                 }
             });

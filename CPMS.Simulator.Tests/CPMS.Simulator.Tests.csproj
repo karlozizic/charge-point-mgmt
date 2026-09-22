@@ -17,7 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\CPMS.API\CPMS.API.csproj"/>
+        <ProjectReference Include="..\CPMS.Simulator\CPMS.Simulator.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
