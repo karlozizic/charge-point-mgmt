@@ -2,6 +2,7 @@ namespace CPMS.API.Projections;
 
 public class MeterValueReadModel
 {
+    public Guid Id { get; set; }
     public Guid SessionId { get; set; }
     public int TransactionId { get; set; }
     public double? CurrentPower { get; set; }

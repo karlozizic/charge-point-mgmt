@@ -11,6 +11,9 @@ export interface ChargeSession {
     energyDeliveredKWh?: number;
     status: string;
     stopReason?: string;
+}
+
+export interface ChargeSessionDetail extends ChargeSession {
     meterValues: MeterValue[];
 }
 

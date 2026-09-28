@@ -1,6 +1,8 @@
-namespace CPMS.API.Projections;
+using CPMS.API.Projections;
 
-public class ChargeSessionReadModel
+namespace CPMS.API.Dtos;
+
+public class ChargeSessionDetailDto
 {
     public Guid Id { get; set; }
     public int TransactionId { get; set; }
@@ -15,11 +17,5 @@ public class ChargeSessionReadModel
     public double? EnergyDeliveredKWh { get; set; }
     public string Status { get; set; }
     public string StopReason { get; set; }
-}
-
-public enum SessionStatus
-{
-    Started,
-    Stopped,
-    Error
+    public List<MeterValueReadModel> MeterValues { get; set; } = new();
 }

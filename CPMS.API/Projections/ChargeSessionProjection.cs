@@ -18,27 +18,15 @@ public class ChargeSessionProjection : SingleStreamProjection<ChargeSessionReadM
             model.StartMeterValue = @event.StartMeterValue;
             model.Status = nameof(SessionStatus.Started);
             model.EnergyDeliveredKWh = 0;
-            model.MeterValues = new List<MeterValueReadModel>();
             return model;
         });
-        
+
         ProjectEvent<MeterValueRecordedEvent>((model, @event) => {
-            var newValue = new MeterValueReadModel { 
-                SessionId = @event.ChargeSessionId,
-                TransactionId = @event.TransactionId,
-                Timestamp = @event.Timestamp,
-                CurrentPower = @event.CurrentPower,
-                EnergyConsumed = @event.EnergyConsumed,
-                StateOfCharge = @event.StateOfCharge
-            };
-    
-            model.MeterValues.Add(newValue);
-            
             if (@event.EnergyConsumed.HasValue && @event.EnergyConsumed.Value > 0)
             {
                 model.EnergyDeliveredKWh = @event.EnergyConsumed.Value;
             }
-    
+
             return model;
         });
         
@@ -52,19 +40,7 @@ public class ChargeSessionProjection : SingleStreamProjection<ChargeSessionReadM
             {
                 model.EnergyDeliveredKWh = (@event.StopMeterValue - model.StartMeterValue);
             }
-            else
-            {
-                var lastMeterValue = model.MeterValues
-                    .Where(mv => mv.EnergyConsumed.HasValue)
-                    .OrderByDescending(mv => mv.Timestamp)
-                    .FirstOrDefault();
-                    
-                if (lastMeterValue?.EnergyConsumed > 0)
-                {
-                    model.EnergyDeliveredKWh = lastMeterValue.EnergyConsumed.Value;
-                }
-            }
-            
+
             return model;
         });
     }

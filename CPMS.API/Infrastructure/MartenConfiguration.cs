@@ -20,6 +20,7 @@ public static class MartenConfiguration
         options.Projections.Add<ChargeSessionProjection>(ProjectionLifecycle.Inline);
         options.Projections.Add<ChargeTagProjection>(ProjectionLifecycle.Inline);
         options.Projections.Add<LocationProjection>(ProjectionLifecycle.Inline);
+        options.Projections.Add<MeterValueProjection>(ProjectionLifecycle.Inline);
         options.Projections.Add<PricingGroupProjection>(ProjectionLifecycle.Inline);
         options.Projections.Add<SessionBillingProjection>(ProjectionLifecycle.Inline);
     }
