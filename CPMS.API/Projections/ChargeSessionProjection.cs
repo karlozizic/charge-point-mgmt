@@ -32,6 +32,7 @@ public class ChargeSessionProjection : SingleStreamProjection<ChargeSessionReadM
         
         ProjectEvent<ChargeSessionStoppedEvent>((model, @event) => {
             model.StopTime = @event.StopTime;
+            model.DurationMinutes = (@event.StopTime - model.StartTime).TotalMinutes;
             model.StopMeterValue = @event.StopMeterValue;
             model.StopReason = @event.StopReason;
             model.Status = nameof(SessionStatus.Stopped);

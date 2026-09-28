@@ -10,6 +10,7 @@ public class ChargeSessionReadModel
     public string TagName { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime? StopTime { get; set; }
+    public double? DurationMinutes { get; set; }
     public double StartMeterValue { get; set; }
     public double? StopMeterValue { get; set; }
     public double? EnergyDeliveredKWh { get; set; }
