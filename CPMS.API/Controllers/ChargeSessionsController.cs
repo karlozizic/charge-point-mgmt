@@ -41,7 +41,7 @@ public class ChargeSessionsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ChargeSessionReadModel>> GetById(Guid id)
+    public async Task<ActionResult<ChargeSessionDetailDto>> GetById(Guid id)
     {
         var session = await _mediator.Send(new GetChargeSessionByIdQuery { SessionId = id });
         return session == null ? NotFound() : Ok(session);

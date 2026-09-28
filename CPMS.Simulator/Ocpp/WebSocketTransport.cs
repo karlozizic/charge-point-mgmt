@@ -21,7 +21,7 @@ public sealed class WebSocketTransport(ClientWebSocket socket) : IOcppTransport
         await _sendLock.WaitAsync(ct);
         try
         {
-            await socket.SendAsync(Encoding.UTF8.GetBytes(frame), WebSocketMessageType.Text, true, ct);
+            await socket.SendAsync(Encoding.UTF8.GetBytes(frame), WebSocketMessageType.Text, true, CancellationToken.None);
         }
         finally
         {

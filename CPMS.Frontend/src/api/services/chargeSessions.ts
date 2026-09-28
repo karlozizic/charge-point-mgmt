@@ -1,6 +1,6 @@
 import apiClient from '../client';
 import type { PagedResult } from '../../types/common';
-import type { ChargeSession, SessionFilters, SessionStats } from '../../types/chargeSession';
+import type { ChargeSession, ChargeSessionDetail, SessionFilters, SessionStats } from '../../types/chargeSession';
 
 // The list pages have no paging controls, so one page holds everything they show.
 const PAGE_SIZE = 100;
@@ -13,8 +13,8 @@ export const chargeSessionsApi = {
         return response.data.items;
     },
 
-    getById: async (id: string): Promise<ChargeSession> => {
-        const response = await apiClient.get<ChargeSession>(`/chargeSessions/${id}`);
+    getById: async (id: string): Promise<ChargeSessionDetail> => {
+        const response = await apiClient.get<ChargeSessionDetail>(`/chargeSessions/${id}`);
         return response.data;
     },
 

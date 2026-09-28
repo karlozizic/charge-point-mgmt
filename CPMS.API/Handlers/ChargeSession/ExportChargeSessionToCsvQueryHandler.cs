@@ -28,10 +28,15 @@ public class ExportChargeSessionToCsvQueryHandler : IRequestHandler<ExportCharge
         if (session == null)
             throw new NotFoundException($"Session with ID {request.SessionId} not found.");
 
-        return GenerateCsvReport(session);
+        var readings = await _querySession.Query<MeterValueReadModel>()
+            .Where(m => m.SessionId == request.SessionId)
+            .OrderBy(m => m.Timestamp)
+            .ToListAsync(cancellationToken);
+
+        return GenerateCsvReport(session, readings);
     }
 
-    private string GenerateCsvReport(ChargeSessionReadModel session)
+    private string GenerateCsvReport(ChargeSessionReadModel session, IReadOnlyList<MeterValueReadModel> readings)
     {
         var csv = new StringBuilder();
         
@@ -54,13 +59,13 @@ public class ExportChargeSessionToCsvQueryHandler : IRequestHandler<ExportCharge
         csv.AppendLine($"Status,{session.Status}");
         csv.AppendLine($"Stop Reason,{session.StopReason}");
         
-        if (session.MeterValues?.Any() == true)
+        if (readings.Count > 0)
         {
             csv.AppendLine();
             csv.AppendLine("METER READINGS");
             csv.AppendLine("Timestamp,Power (kW),Energy (kWh),SoC (%)");
-            
-            foreach (var reading in session.MeterValues.OrderBy(m => m.Timestamp))
+
+            foreach (var reading in readings)
             {
                 csv.AppendLine($"{reading.Timestamp:yyyy-MM-dd HH:mm:ss}," +
                              $"{reading.CurrentPower?.ToString("F1") ?? "-"}," +
