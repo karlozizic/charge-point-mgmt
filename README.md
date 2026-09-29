@@ -50,3 +50,25 @@ string is picked up without touching `appsettings`.
 
 If another container already holds 5432, either stop it or set `POSTGRES_PORT` and
 `ConnectionStrings__MartenDb` in `.env`.
+
+## Load testing
+
+`CPMS.Simulator` drives many simulated chargers against the gateway. Start the API and the gateway first, then:
+
+```bash
+dotnet run --project CPMS.Simulator -c Release -- --chargers 100 --arrival 20 --session 300 --meter-interval 2 --idle 10 --duration 420 --id-prefix CP-A100- --seed
+```
+
+Options are in [`CPMS.Simulator/README.md`](CPMS.Simulator/README.md). Results of the runs so far are in [`docs/load-test-results.md`](docs/load-test-results.md).
+
+## Known limitations
+
+- No auth (Anyone can connect to `/OCPP/{id}` as any charger)
+- One gateway instance only - connections are kept in memory and the gateway never sends commands to chargers.
+- No optimistic concurrency, no outbox. A crash right after a commit can leave a stopped session unbilled.
+- No retries between the gateway and the API.
+- Transaction ids are random and can collide.
+- Billing runs inside StopTransaction, so it is the slowest call.
+- The Stripe webhook picks the latest pending billing instead of matching the session.
+- The frontend polls.
+- Load numbers are from one machine, one run each.
