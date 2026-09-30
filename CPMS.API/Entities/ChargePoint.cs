@@ -30,7 +30,14 @@ public class ChargePoint : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(ChargePointCreatedEvent @event)
+    public static ChargePoint Create(ChargePointCreatedEvent @event)
+    {
+        var chargePoint = new ChargePoint();
+        chargePoint.Apply(@event);
+        return chargePoint;
+    }
+
+    public void Apply(ChargePointCreatedEvent @event)
     {
         Id = @event.ChargePointId;
         OcppChargerId = @event.OcppChargerId;
@@ -52,7 +59,7 @@ public class ChargePoint : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(ConnectorAddedEvent @event)
+    public void Apply(ConnectorAddedEvent @event)
     {
         // Streams written before AddedAt existed carry no value, so it deserializes to default.
         // "Unknown" is honest; year 1 would look like data.
@@ -72,7 +79,7 @@ public class ChargePoint : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(ConnectorStatusChangedEvent @event)
+    public void Apply(ConnectorStatusChangedEvent @event)
     {
         _connectors.Single(c => c.Id == @event.ConnectorId).UpdateStatus(@event.Status, @event.Timestamp);
     }
@@ -85,7 +92,7 @@ public class ChargePoint : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(ChargePointBootedEvent @event)
+    public void Apply(ChargePointBootedEvent @event)
     {
         // Boot details are recorded in the stream only; no aggregate state depends on them yet.
     }
@@ -98,7 +105,7 @@ public class ChargePoint : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(ConnectorErrorLoggedEvent @event)
+    public void Apply(ConnectorErrorLoggedEvent @event)
     {
         _connectors.SingleOrDefault(c => c.Id == @event.ConnectorId)
             ?.LogError(@event.ErrorCode, @event.Info, @event.Timestamp);

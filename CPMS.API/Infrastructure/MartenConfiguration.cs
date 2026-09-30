@@ -1,6 +1,7 @@
 using CPMS.API.Projections;
 using JasperFx.Events.Projections;
 using Marten;
+using Marten.Newtonsoft;
 
 namespace CPMS.API.Infrastructure;
 
@@ -13,6 +14,7 @@ public static class MartenConfiguration
     public static void Configure(StoreOptions options, string connectionString)
     {
         options.Connection(connectionString);
+        options.RestoreV8Defaults();
         options.UseNewtonsoftForSerialization();
 
         // All read models are written in the same transaction as the events.

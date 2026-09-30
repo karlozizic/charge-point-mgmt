@@ -29,7 +29,14 @@ public class ChargeTag : Entity, IAggregateRoot
         Apply(@event);
     }
     
-    private void Apply(ChargeTagCreatedEvent @event)
+    public static ChargeTag Create(ChargeTagCreatedEvent @event)
+    {
+        var tag = new ChargeTag();
+        tag.Apply(@event);
+        return tag;
+    }
+
+    public void Apply(ChargeTagCreatedEvent @event)
     {
         Id = @event.ChargeTagId;
         TagId = @event.TagId;
@@ -48,7 +55,7 @@ public class ChargeTag : Entity, IAggregateRoot
         Apply(@event);
     }
     
-    private void Apply(ChargeTagBlockedEvent @event)
+    public void Apply(ChargeTagBlockedEvent @event)
     {
         Blocked = true;
     }
@@ -64,7 +71,7 @@ public class ChargeTag : Entity, IAggregateRoot
         Apply(@event);
     }
     
-    private void Apply(ChargeTagUnblockedEvent @event)
+    public void Apply(ChargeTagUnblockedEvent @event)
     {
         Blocked = false;
     }
@@ -78,7 +85,7 @@ public class ChargeTag : Entity, IAggregateRoot
     }
     
     
-    private void Apply(ChargeTagExpiryUpdatedEvent @event)
+    public void Apply(ChargeTagExpiryUpdatedEvent @event)
     {
         ExpiryDate = @event.ExpiryDate;
     }
@@ -91,7 +98,7 @@ public class ChargeTag : Entity, IAggregateRoot
         Apply(@event);
     }
     
-    private void Apply(ChargeTagIdUpdatedEvent @event)
+    public void Apply(ChargeTagIdUpdatedEvent @event)
     {
         TagId = @event.TagId;
     }
