@@ -4,7 +4,7 @@ using Marten.Events.Projections;
 
 namespace CPMS.API.Projections;
 
-public class MeterValueProjection : EventProjection
+public partial class MeterValueProjection : EventProjection
 {
     public MeterValueReadModel Create(IEvent<MeterValueRecordedEvent> @event) => new()
     {

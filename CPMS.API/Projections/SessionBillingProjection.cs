@@ -5,37 +5,34 @@ namespace CPMS.API.Projections;
 
 public class SessionBillingProjection : SingleStreamProjection<SessionBillingReadModel, Guid>
 {
-    public SessionBillingProjection()
+    public void Apply(SessionBillingCalculatedEvent @event, SessionBillingReadModel model)
     {
-        ProjectEvent<SessionBillingCalculatedEvent>((model, @event) => {
-            model.Id = @event.BillingId;
-            model.SessionId = @event.SessionId;
-            model.PricingGroupId = @event.PricingGroupId;
-            model.BaseAmount = @event.BaseAmount;
-            model.EnergyAmount = @event.EnergyAmount;
-            model.TotalAmount = @event.TotalAmount;
-            model.Currency = @event.Currency;
-            model.PaymentStatus = "pending";
-            model.CreatedAt = @event.CalculatedAt;
-            return model;
-        });
+        model.Id = @event.BillingId;
+        model.SessionId = @event.SessionId;
+        model.PricingGroupId = @event.PricingGroupId;
+        model.BaseAmount = @event.BaseAmount;
+        model.EnergyAmount = @event.EnergyAmount;
+        model.TotalAmount = @event.TotalAmount;
+        model.Currency = @event.Currency;
+        model.PaymentStatus = "pending";
+        model.CreatedAt = @event.CalculatedAt;
+    }
 
-        ProjectEvent<PaymentIntentCreatedEvent>((model, @event) => {
-            model.StripePaymentIntentId = @event.StripePaymentIntentId;
-            model.PaymentStatus = @event.Status;
-            return model;
-        });
+    public void Apply(PaymentIntentCreatedEvent @event, SessionBillingReadModel model)
+    {
+        model.StripePaymentIntentId = @event.StripePaymentIntentId;
+        model.PaymentStatus = @event.Status;
+    }
 
-        ProjectEvent<StripeSessionCreatedEvent>((model, @event) => {
-            model.StripeSessionId = @event.StripeSessionId;
-            model.PaymentStatus = "pending_payment";
-            return model;
-        });
+    public void Apply(StripeSessionCreatedEvent @event, SessionBillingReadModel model)
+    {
+        model.StripeSessionId = @event.StripeSessionId;
+        model.PaymentStatus = "pending_payment";
+    }
 
-        ProjectEvent<PaymentCompletedEvent>((model, @event) => {
-            model.PaymentStatus = "succeeded";
-            model.PaidAt = @event.PaidAt;
-            return model;
-        });
+    public void Apply(PaymentCompletedEvent @event, SessionBillingReadModel model)
+    {
+        model.PaymentStatus = "succeeded";
+        model.PaidAt = @event.PaidAt;
     }
 }

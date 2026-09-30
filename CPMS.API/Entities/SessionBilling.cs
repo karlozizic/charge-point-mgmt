@@ -35,7 +35,14 @@ public class SessionBilling : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(SessionBillingCalculatedEvent @event)
+    public static SessionBilling Create(SessionBillingCalculatedEvent @event)
+    {
+        var billing = new SessionBilling();
+        billing.Apply(@event);
+        return billing;
+    }
+
+    public void Apply(SessionBillingCalculatedEvent @event)
     {
         Id = @event.BillingId;
         SessionId = @event.SessionId;
@@ -56,7 +63,7 @@ public class SessionBilling : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(PaymentIntentCreatedEvent @event)
+    public void Apply(PaymentIntentCreatedEvent @event)
     {
         StripePaymentIntentId = @event.StripePaymentIntentId;
         PaymentStatus = @event.Status;
@@ -73,7 +80,7 @@ public class SessionBilling : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(PaymentCompletedEvent @event)
+    public void Apply(PaymentCompletedEvent @event)
     {
         PaymentStatus = "succeeded";
         PaidAt = @event.PaidAt;
@@ -87,7 +94,7 @@ public class SessionBilling : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(StripeSessionCreatedEvent @event)
+    public void Apply(StripeSessionCreatedEvent @event)
     {
         StripeSessionId = @event.StripeSessionId;
         PaymentStatus = "pending_payment";

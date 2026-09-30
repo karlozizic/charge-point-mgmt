@@ -31,7 +31,14 @@ public class PricingGroup : Entity, IAggregateRoot
         Apply(@event);
     }
     
-    private void Apply(PricingGroupCreatedEvent @event)
+    public static PricingGroup Create(PricingGroupCreatedEvent @event)
+    {
+        var pricingGroup = new PricingGroup();
+        pricingGroup.Apply(@event);
+        return pricingGroup;
+    }
+
+    public void Apply(PricingGroupCreatedEvent @event)
     {
         Id = @event.PricingGroupId;
         Name = @event.Name;
@@ -53,7 +60,7 @@ public class PricingGroup : Entity, IAggregateRoot
         Apply(@event);
     }
     
-    private void Apply(ChargePointAssignedToPricingGroupEvent @event)
+    public void Apply(ChargePointAssignedToPricingGroupEvent @event)
     {
         _chargePointIds.Add(@event.ChargePointId);
     }

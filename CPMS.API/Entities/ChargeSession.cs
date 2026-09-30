@@ -43,7 +43,14 @@ public class ChargeSession : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(ChargeSessionStartedEvent @event)
+    public static ChargeSession Create(ChargeSessionStartedEvent @event)
+    {
+        var session = new ChargeSession();
+        session.Apply(@event);
+        return session;
+    }
+
+    public void Apply(ChargeSessionStartedEvent @event)
     {
         Id = @event.ChargeSessionId;
         TransactionId = @event.TransactionId;
@@ -74,7 +81,7 @@ public class ChargeSession : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(MeterValueRecordedEvent @event)
+    public void Apply(MeterValueRecordedEvent @event)
     {
         _meterValues.Add(new MeterValue(@event.Timestamp, @event.ChargeSessionId, @event.CurrentPower, @event.EnergyConsumed, @event.StateOfCharge));
     }
@@ -97,7 +104,7 @@ public class ChargeSession : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(ChargeSessionStoppedEvent @event)
+    public void Apply(ChargeSessionStoppedEvent @event)
     {
         StopTime = @event.StopTime;
         StopMeterValue = @event.StopMeterValue;

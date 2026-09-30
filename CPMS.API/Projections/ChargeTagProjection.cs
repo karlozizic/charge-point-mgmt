@@ -5,29 +5,31 @@ namespace CPMS.API.Projections;
 
 public class ChargeTagProjection : SingleStreamProjection<ChargeTagReadModel, Guid>
 {
-    public ChargeTagProjection()
+    public void Apply(ChargeTagCreatedEvent @event, ChargeTagReadModel model)
     {
-        ProjectEvent<ChargeTagCreatedEvent>((model, @event) => {
-            model.Id = @event.ChargeTagId;
-            model.TagId = @event.TagId;
-            model.ExpiryDate = @event.ExpiryDate;
-            model.Blocked = @event.Blocked;
-        });
-            
-        ProjectEvent<ChargeTagBlockedEvent>((model, @event) => {
-            model.Blocked = true;
-        });
-            
-        ProjectEvent<ChargeTagUnblockedEvent>((model, @event) => {
-            model.Blocked = false;
-        });
-            
-        ProjectEvent<ChargeTagExpiryUpdatedEvent>((model, @event) => {
-            model.ExpiryDate = @event.ExpiryDate;
-        });
-        
-        ProjectEvent<ChargeTagIdUpdatedEvent>((model, @event) => {
-            model.TagId = @event.TagId;
-        });
+        model.Id = @event.ChargeTagId;
+        model.TagId = @event.TagId;
+        model.ExpiryDate = @event.ExpiryDate;
+        model.Blocked = @event.Blocked;
+    }
+
+    public void Apply(ChargeTagBlockedEvent @event, ChargeTagReadModel model)
+    {
+        model.Blocked = true;
+    }
+
+    public void Apply(ChargeTagUnblockedEvent @event, ChargeTagReadModel model)
+    {
+        model.Blocked = false;
+    }
+
+    public void Apply(ChargeTagExpiryUpdatedEvent @event, ChargeTagReadModel model)
+    {
+        model.ExpiryDate = @event.ExpiryDate;
+    }
+
+    public void Apply(ChargeTagIdUpdatedEvent @event, ChargeTagReadModel model)
+    {
+        model.TagId = @event.TagId;
     }
 }

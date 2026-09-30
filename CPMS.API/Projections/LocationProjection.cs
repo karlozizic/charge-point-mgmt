@@ -5,43 +5,40 @@ namespace CPMS.API.Projections;
 
 public class LocationProjection : SingleStreamProjection<LocationReadModel, Guid>
 {
-    public LocationProjection()
+    public void Apply(LocationCreatedEvent @event, LocationReadModel model)
     {
-        ProjectEvent<LocationCreatedEvent>((model, @event) => {
-            model.Id = @event.LocationId;
-            model.Name = @event.Name;
-            model.Address = @event.Address;
-            model.City = @event.City;
-            model.PostalCode = @event.PostalCode;
-            model.Country = @event.Country;
-            model.Latitude = @event.Latitude;
-            model.Longitude = @event.Longitude;
-            model.Description = @event.Description;
-            model.CreatedAt = @event.CreatedAt;
-            model.ChargePointIds = new List<Guid>();
-            return model;
-        });
+        model.Id = @event.LocationId;
+        model.Name = @event.Name;
+        model.Address = @event.Address;
+        model.City = @event.City;
+        model.PostalCode = @event.PostalCode;
+        model.Country = @event.Country;
+        model.Latitude = @event.Latitude;
+        model.Longitude = @event.Longitude;
+        model.Description = @event.Description;
+        model.CreatedAt = @event.CreatedAt;
+        model.ChargePointIds = new List<Guid>();
+    }
 
-        ProjectEvent<LocationUpdatedEvent>((model, @event) => {
-            model.Name = @event.Name;
-            model.Address = @event.Address;
-            model.City = @event.City;
-            model.PostalCode = @event.PostalCode;
-            model.Country = @event.Country;
-            model.Latitude = @event.Latitude;
-            model.Longitude = @event.Longitude;
-            model.Description = @event.Description;
-            return model;
-        });
+    public void Apply(LocationUpdatedEvent @event, LocationReadModel model)
+    {
+        model.Name = @event.Name;
+        model.Address = @event.Address;
+        model.City = @event.City;
+        model.PostalCode = @event.PostalCode;
+        model.Country = @event.Country;
+        model.Latitude = @event.Latitude;
+        model.Longitude = @event.Longitude;
+        model.Description = @event.Description;
+    }
 
-        ProjectEvent<ChargePointAddedToLocationEvent>((model, @event) => {
-            model.ChargePointIds ??= new List<Guid>();
-                
-            if (!model.ChargePointIds.Contains(@event.ChargePointId))
-            {
-                model.ChargePointIds.Add(@event.ChargePointId);
-            }
-            return model;
-        });
+    public void Apply(ChargePointAddedToLocationEvent @event, LocationReadModel model)
+    {
+        model.ChargePointIds ??= new List<Guid>();
+
+        if (!model.ChargePointIds.Contains(@event.ChargePointId))
+        {
+            model.ChargePointIds.Add(@event.ChargePointId);
+        }
     }
 }

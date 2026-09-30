@@ -40,7 +40,14 @@ public class Location : Entity, IAggregateRoot
         Apply(@event);
     }
     
-    private void Apply(LocationCreatedEvent @event)
+    public static Location Create(LocationCreatedEvent @event)
+    {
+        var location = new Location();
+        location.Apply(@event);
+        return location;
+    }
+
+    public void Apply(LocationCreatedEvent @event)
     {
         Id = @event.LocationId;
         Name = @event.Name;
@@ -70,7 +77,7 @@ public class Location : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(LocationUpdatedEvent @event)
+    public void Apply(LocationUpdatedEvent @event)
     {
         Name = @event.Name;
         Address = @event.Address;
@@ -94,7 +101,7 @@ public class Location : Entity, IAggregateRoot
         Apply(@event);
     }
 
-    private void Apply(ChargePointAddedToLocationEvent @event)
+    public void Apply(ChargePointAddedToLocationEvent @event)
     {
         _chargePointIds.Add(@event.ChargePointId);
     }
