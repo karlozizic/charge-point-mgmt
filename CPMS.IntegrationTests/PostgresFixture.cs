@@ -1,5 +1,6 @@
 using CPMS.API.Infrastructure;
 using Marten;
+using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
 namespace CPMS.IntegrationTests;
@@ -25,8 +26,18 @@ public class PostgresFixture : IAsyncLifetime
     public DocumentStore NewStore() => DocumentStore.For(options =>
     {
         MartenConfiguration.Configure(options, _container.GetConnectionString());
-        options.DatabaseSchemaName = "test_" + Guid.NewGuid().ToString("n")[..8];
+        options.DatabaseSchemaName = NewSchema();
     });
+
+    public ServiceProvider NewServices()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddCpmsCore(_container.GetConnectionString(), options => options.DatabaseSchemaName = NewSchema());
+        return services.BuildServiceProvider();
+    }
+
+    private static string NewSchema() => "test_" + Guid.NewGuid().ToString("n")[..8];
 }
 
 [CollectionDefinition(nameof(PostgresCollection))]

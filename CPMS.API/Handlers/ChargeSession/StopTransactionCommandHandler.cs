@@ -64,6 +64,9 @@ public class StopTransactionCommandHandler : IRequestHandler<StopTransactionComm
         if (command.StopTagId == null || command.MeterStop == null)
             throw new ArgumentNullException(nameof(command), "StopTagId and MeterStop cannot be null");
 
+        if (chargeSession.StopTime.HasValue)
+            return Accepted();
+
         chargeSession.StopCharging(command.StopTagId, command.MeterStop.Value, command.StopReason);
         await _chargeSessions.SaveAsync(chargeSession, cancellationToken);
 
@@ -77,11 +80,13 @@ public class StopTransactionCommandHandler : IRequestHandler<StopTransactionComm
             await _chargePoints.SaveAsync(chargePoint, cancellationToken);
         }
 
-        return new StopTransactionResponse
-        {
-            IdTagInfo = new IdTagInfo { Status = AuthorizationStatus.Accepted }
-        };
+        return Accepted();
     }
+
+    private static StopTransactionResponse Accepted() => new()
+    {
+        IdTagInfo = new IdTagInfo { Status = AuthorizationStatus.Accepted }
+    };
 
     private static StopTransactionResponse Invalid() => new()
     {

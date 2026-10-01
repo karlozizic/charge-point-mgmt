@@ -1,5 +1,6 @@
 using CPMS.API.BusinessRules;
 using CPMS.API.Exceptions;
+using CPMS.API.Infrastructure;
 using CPMS.API.Projections;
 using CPMS.API.Repositories;
 using CPMS.BuildingBlocks.Domain;
@@ -55,8 +56,18 @@ public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCo
         if (chargePoint.Connectors.All(c => c.Id != command.ConnectorId))
             throw new NotFoundException($"Connector {command.ConnectorId} not found on charge point {command.OcppChargerId}");
 
-        // Known gap: no uniqueness check on the OCPP transaction id.
-        var transactionId = Random.Shared.Next(1, 1_000_000);
+        var chargePointKey = chargePoint.Id.ToString();
+        var retried = await _querySession.Query<ChargeSessionReadModel>()
+            .FirstOrDefaultAsync(s => s.ChargePointId == chargePointKey
+                                      && s.ConnectorId == command.ConnectorId
+                                      && s.Status == nameof(SessionStatus.Started)
+                                      && s.TagId == command.TagId
+                                      && s.StartMeterValue == command.MeterStart, cancellationToken);
+
+        if (retried != null)
+            return Accepted(retried.TransactionId, tag);
+
+        var transactionId = await _querySession.NextTransactionIdAsync(cancellationToken);
 
         var chargeSession = new Entities.ChargeSession(
             Guid.NewGuid(),
@@ -71,14 +82,16 @@ public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCo
         chargePoint.UpdateConnectorStatus(command.ConnectorId, "Charging");
         await _chargePoints.SaveAsync(chargePoint, cancellationToken);
 
-        return new StartTransactionResponse
-        {
-            TransactionId = transactionId,
-            IdTagInfo = new IdTagInfo
-            {
-                Status = AuthorizationStatus.Accepted,
-                ExpiryDate = tag.ExpiryDate.HasValue ? new DateTimeOffset(tag.ExpiryDate.Value) : null
-            }
-        };
+        return Accepted(transactionId, tag);
     }
+
+    private static StartTransactionResponse Accepted(int transactionId, ChargeTagReadModel tag) => new()
+    {
+        TransactionId = transactionId,
+        IdTagInfo = new IdTagInfo
+        {
+            Status = AuthorizationStatus.Accepted,
+            ExpiryDate = tag.ExpiryDate.HasValue ? new DateTimeOffset(tag.ExpiryDate.Value) : null
+        }
+    };
 }
