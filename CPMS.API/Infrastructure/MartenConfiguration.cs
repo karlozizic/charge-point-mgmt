@@ -16,6 +16,7 @@ public static class MartenConfiguration
         options.Connection(connectionString);
         options.RestoreV8Defaults();
         options.UseNewtonsoftForSerialization();
+        options.Storage.Add(new TransactionIdSequence(options));
 
         // All read models are written in the same transaction as the events.
         options.Projections.Add<ChargePointProjection>(ProjectionLifecycle.Inline);
