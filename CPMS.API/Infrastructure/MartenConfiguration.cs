@@ -17,6 +17,7 @@ public static class MartenConfiguration
         options.RestoreV8Defaults();
         options.UseNewtonsoftForSerialization();
         options.Storage.Add(new TransactionIdSequence(options));
+        options.Schema.For<ChargePointReadModel>().UniqueIndex(cp => cp.OcppChargerId);
 
         // All read models are written in the same transaction as the events.
         options.Projections.Add<ChargePointProjection>(ProjectionLifecycle.Inline);

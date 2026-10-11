@@ -30,6 +30,22 @@ public class ChargePointMustHaveValidNameRule : IBusinessRule
     public string Message => "Charge point must have valid name!";
 }
 
+public class OcppChargerIdMustBeUniqueRule : IBusinessRule
+{
+    private readonly string _ocppChargerId;
+    private readonly bool _alreadyRegistered;
+
+    public OcppChargerIdMustBeUniqueRule(string ocppChargerId, bool alreadyRegistered)
+    {
+        _ocppChargerId = ocppChargerId;
+        _alreadyRegistered = alreadyRegistered;
+    }
+
+    public bool IsBroken() => _alreadyRegistered;
+
+    public string Message => $"Charge point {_ocppChargerId} is already registered";
+}
+
 public class ConnectorMustExistRule : IBusinessRule
 {
     private readonly int _connectorId;

@@ -1,3 +1,4 @@
+using CPMS.API.Controllers;
 using CPMS.API.Dtos;
 using Stripe;
 using Stripe.Checkout;
@@ -16,6 +17,7 @@ public class StripeService : IStripeService
     }
 
     public async Task<CheckoutSessionResponse> CreateCheckoutSessionAsync(
+        Guid billingId,
         decimal amount,
         string currency,
         string description,
@@ -51,8 +53,16 @@ public class StripeService : IStripeService
                 CancelUrl = cancelUrl,
                 Metadata = new Dictionary<string, string>
                 {
+                    { WebhookController.BillingIdMetadataKey, billingId.ToString() },
                     { "source", "cpms" },
                     { "description", description }
+                },
+                PaymentIntentData = new SessionPaymentIntentDataOptions
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        { WebhookController.BillingIdMetadataKey, billingId.ToString() }
+                    }
                 }
             };
 
@@ -78,6 +88,7 @@ public class StripeService : IStripeService
 public interface IStripeService
 {
     Task<CheckoutSessionResponse> CreateCheckoutSessionAsync(
+        Guid billingId,
         decimal amount,
         string currency,
         string description,
