@@ -29,7 +29,7 @@ public class CreatePricingGroupCommandHandler : IRequestHandler<CreatePricingGro
             command.PricePerKwh,
             command.Currency);
 
-        await _pricingGroups.SaveAsync(pricingGroup, cancellationToken);
+        await _pricingGroups.AddAsync(pricingGroup, cancellationToken);
         return pricingGroup.Id;
     }
 }

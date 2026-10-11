@@ -37,7 +37,7 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
             command.Longitude,
             command.Description);
 
-        await _locations.SaveAsync(location, cancellationToken);
+        await _locations.AddAsync(location, cancellationToken);
         return location.Id;
     }
 }

@@ -28,7 +28,7 @@ public class CreateChargePointCommandHandler : IRequestHandler<CreateChargePoint
             command.MaxPower,
             null);
 
-        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
+        await _chargePoints.AddAsync(chargePoint, cancellationToken);
 
         return chargePoint.Id;
     }

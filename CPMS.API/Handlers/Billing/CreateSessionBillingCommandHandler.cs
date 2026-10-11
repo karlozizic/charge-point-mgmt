@@ -56,7 +56,7 @@ public class CreateSessionBillingCommandHandler : IRequestHandler<CreateSessionB
             totalCost - pricingGroup.BasePrice,
             pricingGroup.Currency);
 
-        await _billings.SaveAsync(billing, cancellationToken);
+        await _billings.AddAsync(billing, cancellationToken);
         return billing.Id;
     }
 }

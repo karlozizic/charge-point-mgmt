@@ -34,7 +34,7 @@ public class CreateChargeTagCommandHandler : IRequestHandler<CreateChargeTagComm
 
         var chargeTag = new Entities.ChargeTag(Guid.NewGuid(), request.TagId, request.ExpiryDate);
 
-        await _chargeTags.SaveAsync(chargeTag, cancellationToken);
+        await _chargeTags.AddAsync(chargeTag, cancellationToken);
         return chargeTag.Id;
     }
 }

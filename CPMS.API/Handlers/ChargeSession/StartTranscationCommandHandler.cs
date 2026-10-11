@@ -77,7 +77,7 @@ public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCo
             command.TagId,
             command.MeterStart);
 
-        await _chargeSessions.SaveAsync(chargeSession, cancellationToken);
+        await _chargeSessions.AddAsync(chargeSession, cancellationToken);
 
         chargePoint.UpdateConnectorStatus(command.ConnectorId, "Charging");
         await _chargePoints.SaveAsync(chargePoint, cancellationToken);
