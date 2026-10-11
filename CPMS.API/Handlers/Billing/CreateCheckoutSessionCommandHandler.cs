@@ -30,7 +30,7 @@ public class CreateCheckoutSessionCommandHandler : IRequestHandler<CreateCheckou
 
     public async Task<CheckoutSessionResponse> Handle(CreateCheckoutSessionCommand command, CancellationToken cancellationToken)
     {
-        var billing = await _billings.LoadAsync(command.SessionBillingId, cancellationToken);
+        var billing = await _billings.FindAsync(command.SessionBillingId, cancellationToken);
         if (billing == null)
             throw new NotFoundException("Billing record not found");
 
@@ -47,7 +47,7 @@ public class CreateCheckoutSessionCommandHandler : IRequestHandler<CreateCheckou
             cancelUrl);
 
         billing.SetStripeSessionId(checkoutSession.SessionId);
-        await _billings.SaveAsync(billing, cancellationToken);
+        await _billings.UpdateAsync(billing, cancellationToken);
 
         return checkoutSession;
     }

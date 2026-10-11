@@ -79,12 +79,12 @@ public class WebhookController : ControllerBase
 
     private async Task MarkBillingAsPaid(Guid billingId)
     {
-        var billing = await _billings.LoadAsync(billingId);
+        var billing = await _billings.FindAsync(billingId);
         if (billing == null)
             return;
 
         billing.MarkAsPaid();
-        await _billings.SaveAsync(billing);
+        await _billings.UpdateAsync(billing);
         _logger.LogInformation("Billing marked as paid: {BillingId}", billingId);
     }
 }

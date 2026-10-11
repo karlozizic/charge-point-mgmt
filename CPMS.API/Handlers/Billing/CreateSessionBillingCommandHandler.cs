@@ -42,7 +42,7 @@ public class CreateSessionBillingCommandHandler : IRequestHandler<CreateSessionB
         if (pricingGroupReadModel == null)
             throw new InvalidOperationException("No pricing group found for this charge point");
 
-        var pricingGroup = await _pricingGroups.LoadAsync(pricingGroupReadModel.Id, cancellationToken);
+        var pricingGroup = await _pricingGroups.FindAsync(pricingGroupReadModel.Id, cancellationToken);
         if (pricingGroup == null)
             throw new InvalidOperationException("Pricing group not found");
 

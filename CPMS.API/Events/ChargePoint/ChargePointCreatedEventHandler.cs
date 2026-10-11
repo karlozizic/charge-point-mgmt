@@ -14,11 +14,11 @@ public class ChargePointCreatedEventHandler : INotificationHandler<ChargePointCr
 
     public async Task Handle(ChargePointCreatedEvent notification, CancellationToken cancellationToken)
     {
-        var location = await _locations.LoadAsync(notification.LocationId, cancellationToken);
+        var location = await _locations.FindAsync(notification.LocationId, cancellationToken);
         if (location == null)
             return;
 
         location.AddChargePoint(notification.ChargePointId, notification.OcppChargerId);
-        await _locations.SaveAsync(location, cancellationToken);
+        await _locations.UpdateAsync(location, cancellationToken);
     }
 }

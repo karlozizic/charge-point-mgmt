@@ -34,7 +34,7 @@ public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationComman
 
     public async Task Handle(UpdateLocationCommand command, CancellationToken cancellationToken)
     {
-        var location = await _locations.LoadAsync(command.Id, cancellationToken);
+        var location = await _locations.FindAsync(command.Id, cancellationToken);
         if (location == null)
             throw new NotFoundException($"Location with ID {command.Id} does not exist.");
 
@@ -53,6 +53,6 @@ public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationComman
             command.Longitude,
             command.Description);
 
-        await _locations.SaveAsync(location, cancellationToken);
+        await _locations.UpdateAsync(location, cancellationToken);
     }
 }

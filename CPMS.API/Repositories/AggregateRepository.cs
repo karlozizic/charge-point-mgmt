@@ -10,7 +10,7 @@ namespace CPMS.API.Repositories;
 /// </summary>
 public interface IAggregateRepository<T> where T : Entity, IAggregateRoot
 {
-    Task<T?> LoadAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<T?> FindAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task AddAsync(T aggregate, CancellationToken cancellationToken = default);
 
@@ -18,7 +18,7 @@ public interface IAggregateRepository<T> where T : Entity, IAggregateRoot
     /// Appends the aggregate's pending domain events to its stream, commits (inline projections run in
     /// the same transaction) and then publishes each event as a MediatR notification.
     /// </summary>
-    Task SaveAsync(T aggregate, CancellationToken cancellationToken = default);
+    Task UpdateAsync(T aggregate, CancellationToken cancellationToken = default);
 }
 
 public class MartenAggregateRepository<T> : IAggregateRepository<T> where T : Entity, IAggregateRoot
@@ -32,7 +32,7 @@ public class MartenAggregateRepository<T> : IAggregateRepository<T> where T : En
         _mediator = mediator;
     }
 
-    public async Task<T?> LoadAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<T?> FindAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var stream = await _session.Events.FetchForWriting<T>(id, cancellationToken);
         return stream.Aggregate;
@@ -48,7 +48,7 @@ public class MartenAggregateRepository<T> : IAggregateRepository<T> where T : En
         await CommitAsync(aggregate, events, cancellationToken);
     }
 
-    public async Task SaveAsync(T aggregate, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(T aggregate, CancellationToken cancellationToken = default)
     {
         var events = aggregate.DomainEvents.ToList();
         if (events.Count == 0)

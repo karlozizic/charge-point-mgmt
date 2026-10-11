@@ -19,21 +19,21 @@ public class ConcurrencyTests
     public ConcurrencyTests(PostgresFixture fixture) => _fixture = fixture;
 
     [Fact]
-    public async Task SaveAsync_after_another_request_changed_the_stream_throws_and_writes_nothing()
+    public async Task UpdateAsync_after_another_request_changed_the_stream_throws_and_writes_nothing()
     {
         await using var services = _fixture.NewServices();
         var sessionId = await StartSessionAsync(services);
 
         await using var first = services.CreateAsyncScope();
         await using var second = services.CreateAsyncScope();
-        var firstCopy = await Sessions(first).LoadAsync(sessionId);
-        var secondCopy = await Sessions(second).LoadAsync(sessionId);
+        var firstCopy = await Sessions(first).FindAsync(sessionId);
+        var secondCopy = await Sessions(second).FindAsync(sessionId);
 
         firstCopy!.StopCharging("TAG-1", 5, "Local");
-        await Sessions(first).SaveAsync(firstCopy);
+        await Sessions(first).UpdateAsync(firstCopy);
 
         secondCopy!.StopCharging("TAG-1", 5, "Local");
-        await Assert.ThrowsAnyAsync<ConcurrencyException>(() => Sessions(second).SaveAsync(secondCopy));
+        await Assert.ThrowsAnyAsync<ConcurrencyException>(() => Sessions(second).UpdateAsync(secondCopy));
 
         Assert.Equal(1, await CountStopEventsAsync(services));
     }
@@ -53,7 +53,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public async Task SaveAsync_twice_on_the_same_loaded_aggregate_succeeds()
+    public async Task UpdateAsync_twice_on_the_same_loaded_aggregate_succeeds()
     {
         await using var services = _fixture.NewServices();
         var id = Guid.NewGuid();
@@ -61,14 +61,14 @@ public class ConcurrencyTests
             await Tags(create).AddAsync(new ChargeTag(id, "TAG-1"));
 
         await using var scope = services.CreateAsyncScope();
-        var tag = await Tags(scope).LoadAsync(id);
+        var tag = await Tags(scope).FindAsync(id);
         tag!.Block();
-        await Tags(scope).SaveAsync(tag);
+        await Tags(scope).UpdateAsync(tag);
         tag.Unblock();
-        await Tags(scope).SaveAsync(tag);
+        await Tags(scope).UpdateAsync(tag);
 
         await using var check = services.CreateAsyncScope();
-        Assert.False((await Tags(check).LoadAsync(id))!.Blocked);
+        Assert.False((await Tags(check).FindAsync(id))!.Blocked);
     }
 
     [Fact]

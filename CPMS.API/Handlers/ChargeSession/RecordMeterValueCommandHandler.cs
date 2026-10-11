@@ -30,7 +30,7 @@ public class MeterValuesCommandHandler : IRequestHandler<MeterValuesCommand>
 
         var readModel = await _querySession.Query<ChargeSessionReadModel>()
             .FirstOrDefaultAsync(cs => cs.TransactionId == request.TransactionId, cancellationToken);
-        var chargeSession = readModel == null ? null : await _chargeSessions.LoadAsync(readModel.Id, cancellationToken);
+        var chargeSession = readModel == null ? null : await _chargeSessions.FindAsync(readModel.Id, cancellationToken);
 
         if (chargeSession == null)
         {
@@ -45,6 +45,6 @@ public class MeterValuesCommandHandler : IRequestHandler<MeterValuesCommand>
             request.StateOfCharge,
             DateTime.UtcNow);
 
-        await _chargeSessions.SaveAsync(chargeSession, cancellationToken);
+        await _chargeSessions.UpdateAsync(chargeSession, cancellationToken);
     }
 }
