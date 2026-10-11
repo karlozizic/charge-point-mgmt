@@ -1,5 +1,7 @@
 using CPMS.API.Exceptions;
 using CPMS.BuildingBlocks.Domain;
+using JasperFx;
+using Marten.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +23,7 @@ public class ApiExceptionHandler : IExceptionHandler
     {
         var (status, title) = exception switch
         {
+            ConcurrencyException or ExistingStreamIdCollisionException => (StatusCodes.Status409Conflict, "Conflict"),
             NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
             BusinessRuleValidationException => (StatusCodes.Status400BadRequest, "Business rule violated"),
             InvalidOperationException => (StatusCodes.Status400BadRequest, "Invalid operation"),

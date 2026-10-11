@@ -1,10 +1,13 @@
 using CPMS.API.Entities;
 using CPMS.API.Events.ChargeSession;
+using CPMS.API.Infrastructure;
 using CPMS.API.Repositories;
 using JasperFx;
 using Marten;
 using Marten.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CPMS.IntegrationTests;
 
@@ -66,6 +69,18 @@ public class ConcurrencyTests
 
         await using var check = services.CreateAsyncScope();
         Assert.False((await Tags(check).LoadAsync(id))!.Blocked);
+    }
+
+    [Fact]
+    public async Task A_concurrency_conflict_is_answered_with_409()
+    {
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+        var handler = new ApiExceptionHandler(NullLogger<ApiExceptionHandler>.Instance);
+
+        await handler.TryHandleAsync(context, new ConcurrencyException("conflict", new Exception()), CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
     }
 
     private static async Task<Guid> StartSessionAsync(IServiceProvider services)
