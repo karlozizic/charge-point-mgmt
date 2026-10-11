@@ -69,12 +69,12 @@ public class SessionBilling : Entity, IAggregateRoot
         PaymentStatus = @event.Status;
     }
 
-    public void MarkAsPaid()
+    public void MarkAsPaid(string? stripePaymentIntentId)
     {
         if (PaymentStatus == "succeeded")
             return;
 
-        var @event = new PaymentCompletedEvent(SessionId, StripePaymentIntentId!, TotalAmount, DateTime.UtcNow);
+        var @event = new PaymentCompletedEvent(SessionId, stripePaymentIntentId ?? StripePaymentIntentId, TotalAmount, DateTime.UtcNow);
 
         AddDomainEvent(@event);
         Apply(@event);
@@ -82,6 +82,7 @@ public class SessionBilling : Entity, IAggregateRoot
 
     public void Apply(PaymentCompletedEvent @event)
     {
+        StripePaymentIntentId = @event.StripePaymentIntentId;
         PaymentStatus = "succeeded";
         PaidAt = @event.PaidAt;
     }

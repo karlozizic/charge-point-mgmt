@@ -39,6 +39,7 @@ public class CreateCheckoutSessionCommandHandler : IRequestHandler<CreateCheckou
         var cancelUrl = $"{baseUrl}/charge-sessions/{billing.SessionId}";
 
         var checkoutSession = await _stripeService.CreateCheckoutSessionAsync(
+            billing.Id,
             billing.TotalAmount,
             billing.Currency,
             $"Charging Session - {billing.SessionId}",

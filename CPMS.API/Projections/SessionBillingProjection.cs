@@ -32,6 +32,7 @@ public class SessionBillingProjection : SingleStreamProjection<SessionBillingRea
 
     public void Apply(PaymentCompletedEvent @event, SessionBillingReadModel model)
     {
+        model.StripePaymentIntentId = @event.StripePaymentIntentId;
         model.PaymentStatus = "succeeded";
         model.PaidAt = @event.PaidAt;
     }

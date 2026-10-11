@@ -5,13 +5,13 @@ namespace CPMS.API.Events.Billing;
 public class PaymentCompletedEvent : DomainEventBase
 {
     public Guid SessionId { get; }
-    public string StripePaymentIntentId { get; }
+    public string? StripePaymentIntentId { get; }
     public decimal AmountPaid { get; }
     public DateTime PaidAt { get; }
     
     public PaymentCompletedEvent(
         Guid sessionId,
-        string stripePaymentIntentId,
+        string? stripePaymentIntentId,
         decimal amountPaid,
         DateTime paidAt)
     {

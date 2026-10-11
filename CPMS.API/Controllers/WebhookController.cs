@@ -1,6 +1,5 @@
-using CPMS.API.Projections;
-using CPMS.API.Repositories;
-using Marten;
+using CPMS.API.Handlers.Billing;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
 using Stripe.Checkout;
@@ -11,21 +10,20 @@ namespace CPMS.API.Controllers;
 [Route("api/[controller]")]
 public class WebhookController : ControllerBase
 {
+    public const string BillingIdMetadataKey = "billingId";
+
     private readonly IConfiguration _configuration;
     private readonly ILogger<WebhookController> _logger;
-    private readonly IQuerySession _querySession;
-    private readonly IAggregateRepository<Entities.SessionBilling> _billings;
+    private readonly IMediator _mediator;
 
     public WebhookController(
         IConfiguration configuration,
         ILogger<WebhookController> logger,
-        IQuerySession querySession,
-        IAggregateRepository<Entities.SessionBilling> billings)
+        IMediator mediator)
     {
         _configuration = configuration;
         _logger = logger;
-        _querySession = querySession;
-        _billings = billings;
+        _mediator = mediator;
     }
 
     [HttpPost("stripe")]
@@ -46,45 +44,30 @@ public class WebhookController : ControllerBase
             return BadRequest();
         }
 
-        _logger.LogInformation("Stripe webhook: {EventType}", stripeEvent.Type);
+        _logger.LogInformation("Stripe webhook {EventId}: {EventType}", stripeEvent.Id, stripeEvent.Type);
 
-        switch (stripeEvent.Type)
+        var payment = stripeEvent.Type switch
         {
-            case "checkout.session.completed" when stripeEvent.Data.Object is Session session:
-            {
-                var billing = await _querySession
-                    .Query<SessionBillingReadModel>()
-                    .FirstOrDefaultAsync(b => b.StripeSessionId == session.Id);
-                if (billing != null)
-                    await MarkBillingAsPaid(billing.Id);
-                break;
-            }
-            case "payment_intent.succeeded":
-            {
-                // Known gap: the payment intent is not correlated to a billing, so the most recent
-                // pending one is assumed. Can mark the wrong session as paid.
-                var recentBilling = await _querySession
-                    .Query<SessionBillingReadModel>()
-                    .Where(b => b.PaymentStatus == "pending_payment")
-                    .OrderByDescending(b => b.CreatedAt)
-                    .FirstOrDefaultAsync();
-                if (recentBilling != null)
-                    await MarkBillingAsPaid(recentBilling.Id);
-                break;
-            }
-        }
+            "checkout.session.completed" when stripeEvent.Data.Object is Session session =>
+                (BillingId: BillingIdFrom(session.Metadata), PaymentIntentId: session.PaymentIntentId),
+            "payment_intent.succeeded" when stripeEvent.Data.Object is PaymentIntent intent =>
+                (BillingId: BillingIdFrom(intent.Metadata), PaymentIntentId: intent.Id),
+            _ => (BillingId: null, PaymentIntentId: null)
+        };
+
+        if (payment.BillingId is { } billingId)
+            await _mediator.Send(new MarkBillingPaidCommand(billingId, payment.PaymentIntentId));
+        else if (stripeEvent.Type is "checkout.session.completed" or "payment_intent.succeeded")
+            _logger.LogWarning("Stripe event {EventId} carries no {Key} metadata", stripeEvent.Id, BillingIdMetadataKey);
 
         return Ok();
     }
 
-    private async Task MarkBillingAsPaid(Guid billingId)
+    private static Guid? BillingIdFrom(IDictionary<string, string>? metadata)
     {
-        var billing = await _billings.FindAsync(billingId);
-        if (billing == null)
-            return;
+        if (metadata == null || !metadata.TryGetValue(BillingIdMetadataKey, out var value))
+            return null;
 
-        billing.MarkAsPaid();
-        await _billings.UpdateAsync(billing);
-        _logger.LogInformation("Billing marked as paid: {BillingId}", billingId);
+        return Guid.TryParse(value, out var billingId) ? billingId : null;
     }
 }
