@@ -48,7 +48,7 @@ public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCo
             .FirstOrDefaultAsync(cp => cp.OcppChargerId == command.OcppChargerId, cancellationToken);
         var chargePoint = chargePointReadModel == null
             ? null
-            : await _chargePoints.LoadAsync(chargePointReadModel.Id, cancellationToken);
+            : await _chargePoints.FindAsync(chargePointReadModel.Id, cancellationToken);
 
         if (chargePoint == null)
             throw new NotFoundException($"Charge point {command.OcppChargerId} not found");
@@ -77,10 +77,10 @@ public class StartTransactionCommandHandler : IRequestHandler<StartTransactionCo
             command.TagId,
             command.MeterStart);
 
-        await _chargeSessions.SaveAsync(chargeSession, cancellationToken);
+        await _chargeSessions.AddAsync(chargeSession, cancellationToken);
 
         chargePoint.UpdateConnectorStatus(command.ConnectorId, "Charging");
-        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
+        await _chargePoints.UpdateAsync(chargePoint, cancellationToken);
 
         return Accepted(transactionId, tag);
     }

@@ -21,10 +21,10 @@ public class UpdateChargeTagExpiryCommandHandler : IRequestHandler<UpdateChargeT
 
     public async Task Handle(UpdateChargeTagExpiryCommand request, CancellationToken cancellationToken)
     {
-        var chargeTag = await _chargeTags.LoadAsync(request.Id, cancellationToken)
+        var chargeTag = await _chargeTags.FindAsync(request.Id, cancellationToken)
                         ?? throw new NotFoundException($"ChargeTag with ID {request.Id} not found.");
 
         chargeTag.UpdateExpiry(request.ExpiryDate);
-        await _chargeTags.SaveAsync(chargeTag, cancellationToken);
+        await _chargeTags.UpdateAsync(chargeTag, cancellationToken);
     }
 }

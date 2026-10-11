@@ -20,10 +20,10 @@ public class UnblockChargeTagCommandHandler : IRequestHandler<UnblockChargeTagCo
 
     public async Task Handle(UnblockChargeTagCommand request, CancellationToken cancellationToken)
     {
-        var chargeTag = await _chargeTags.LoadAsync(request.Id, cancellationToken)
+        var chargeTag = await _chargeTags.FindAsync(request.Id, cancellationToken)
                         ?? throw new NotFoundException($"ChargeTag with ID {request.Id} not found.");
 
         chargeTag.Unblock();
-        await _chargeTags.SaveAsync(chargeTag, cancellationToken);
+        await _chargeTags.UpdateAsync(chargeTag, cancellationToken);
     }
 }

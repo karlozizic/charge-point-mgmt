@@ -53,7 +53,7 @@ public class StopTransactionCommandHandler : IRequestHandler<StopTransactionComm
     {
         var readModel = await _querySession.Query<ChargeSessionReadModel>()
             .FirstOrDefaultAsync(cs => cs.TransactionId == command.TranscationId, cancellationToken);
-        var chargeSession = readModel == null ? null : await _chargeSessions.LoadAsync(readModel.Id, cancellationToken);
+        var chargeSession = readModel == null ? null : await _chargeSessions.FindAsync(readModel.Id, cancellationToken);
 
         if (chargeSession == null)
         {
@@ -68,16 +68,16 @@ public class StopTransactionCommandHandler : IRequestHandler<StopTransactionComm
             return Accepted();
 
         chargeSession.StopCharging(command.StopTagId, command.MeterStop.Value, command.StopReason);
-        await _chargeSessions.SaveAsync(chargeSession, cancellationToken);
+        await _chargeSessions.UpdateAsync(chargeSession, cancellationToken);
 
-        var chargePoint = await _chargePoints.LoadAsync(chargeSession.ChargePointId, cancellationToken);
+        var chargePoint = await _chargePoints.FindAsync(chargeSession.ChargePointId, cancellationToken);
         if (chargePoint == null)
             return Invalid();
 
         if (chargePoint.Connectors.Any(c => c.Id == chargeSession.ConnectorId))
         {
             chargePoint.UpdateConnectorStatus(chargeSession.ConnectorId, "Available");
-            await _chargePoints.SaveAsync(chargePoint, cancellationToken);
+            await _chargePoints.UpdateAsync(chargePoint, cancellationToken);
         }
 
         return Accepted();

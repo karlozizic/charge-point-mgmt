@@ -21,11 +21,11 @@ public class AssignChargePointToPricingGroupCommandHandler : IRequestHandler<Ass
 
     public async Task Handle(AssignChargePointToPricingGroupCommand command, CancellationToken cancellationToken)
     {
-        var pricingGroup = await _pricingGroups.LoadAsync(command.PricingGroupId, cancellationToken);
+        var pricingGroup = await _pricingGroups.FindAsync(command.PricingGroupId, cancellationToken);
         if (pricingGroup == null)
             throw new NotFoundException($"Pricing group {command.PricingGroupId} not found");
 
         pricingGroup.AssignChargePoint(command.ChargePointId);
-        await _pricingGroups.SaveAsync(pricingGroup, cancellationToken);
+        await _pricingGroups.UpdateAsync(pricingGroup, cancellationToken);
     }
 }

@@ -31,7 +31,7 @@ public class RegisterBootNotificationCommandHandler : IRequestHandler<BootNotifi
         if (readModel == null)
             return false;
 
-        var chargePoint = await _chargePoints.LoadAsync(readModel.Id, cancellationToken);
+        var chargePoint = await _chargePoints.FindAsync(readModel.Id, cancellationToken);
         if (chargePoint == null)
             return false;
 
@@ -41,7 +41,7 @@ public class RegisterBootNotificationCommandHandler : IRequestHandler<BootNotifi
             request.ChargePointVendor,
             request.FirmwareVersion);
 
-        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
+        await _chargePoints.UpdateAsync(chargePoint, cancellationToken);
         return true;
     }
 }

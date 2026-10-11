@@ -40,7 +40,7 @@ public class UpdateConnectorStatusCommandHandler : IRequestHandler<UpdateConnect
 
         var readModel = await _querySession.Query<ChargePointReadModel>()
             .FirstOrDefaultAsync(cp => cp.OcppChargerId == command.OcppChargerId, cancellationToken);
-        var chargePoint = readModel == null ? null : await _chargePoints.LoadAsync(readModel.Id, cancellationToken);
+        var chargePoint = readModel == null ? null : await _chargePoints.FindAsync(readModel.Id, cancellationToken);
 
         if (chargePoint == null)
         {
@@ -57,6 +57,6 @@ public class UpdateConnectorStatusCommandHandler : IRequestHandler<UpdateConnect
         if (!string.IsNullOrEmpty(command.ErrorCode) && command.ErrorCode != "NoError")
             chargePoint.LogConnectorError(command.ConnectorId, command.ErrorCode, command.Info);
 
-        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
+        await _chargePoints.UpdateAsync(chargePoint, cancellationToken);
     }
 }

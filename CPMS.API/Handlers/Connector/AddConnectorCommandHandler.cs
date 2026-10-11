@@ -29,13 +29,13 @@ public class AddConnectorCommandHandler : IRequestHandler<AddConnectorCommand>
     {
         var readModel = await _querySession.Query<ChargePointReadModel>()
             .FirstOrDefaultAsync(cp => cp.OcppChargerId == command.OcppChargerId, cancellationToken);
-        var chargePoint = readModel == null ? null : await _chargePoints.LoadAsync(readModel.Id, cancellationToken);
+        var chargePoint = readModel == null ? null : await _chargePoints.FindAsync(readModel.Id, cancellationToken);
 
         if (chargePoint == null)
             throw new NotFoundException($"Charge point {command.OcppChargerId} not found");
 
         chargePoint.AddConnector(chargePoint.NextConnectorId(), command.Name);
 
-        await _chargePoints.SaveAsync(chargePoint, cancellationToken);
+        await _chargePoints.UpdateAsync(chargePoint, cancellationToken);
     }
 }
